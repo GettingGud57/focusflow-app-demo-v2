@@ -27,10 +27,22 @@ export type Workflow = {
 };
 
 
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  startTime: Date; // storing as Date object makes math easier than strings
+  duration: number; // in minutes
+  type: "task" | "workflow";
+  referenceId: string;  // ID of task or workflow
+  isCompleted: boolean;
+};
+
+
 
 interface DataContextType {
   tasks: Task[];
   workflows: Workflow[];
+  events: CalendarEvent[];
   addWorkflow: (workflow: Omit<Workflow, 'id'>) => void;
   updateWorkflow: (id: string, workflow: Partial<Workflow>) => void;
   deleteWorkflow: (id: string) => void;
@@ -38,6 +50,11 @@ interface DataContextType {
   addTask: (task: Omit<Task, 'id'>) => void;
   updateTask: (id: string, task: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  // calendar actions
+  addEvent: (event: Omit<CalendarEvent, 'id'>) => void;
+  updateEvent: (id: string, event: Partial<CalendarEvent>) => void;
+  deleteEvent: (id: string) => void;
+  toggleEventCompletion: (id: string) => void;
 }
 
 const INITIAL_TASKS: Task[] =  [
@@ -74,12 +91,30 @@ const INITIAL_WORKFLOWS: Workflow[] = [
       loop: 4
     }]
 
+
+const INITIAL_EVENTS: CalendarEvent[] = [
+  {
+    id: "e1",
+    title: "Study React",
+    startTime: new Date(), // Defaults to 'today' for testing
+    duration: 25,
+    type: "task",
+    referenceId: "1",
+    isCompleted: false
+  }
+];
+
+
+
+
+
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   // The "Database" lives here in State
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [workflows, setWorkflows] = useState<Workflow[]>(INITIAL_WORKFLOWS);
+  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
 
   // --- ACTIONS ---
 
@@ -114,6 +149,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
 
+  // Calendar Events
+  const addEvent = (newEvent: Omit<CalendarEvent, 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setEvents(prev => [...prev, { ...newEvent, id }]);
+  };
+
+  const updateEvent = (id: string, updatedFields: Partial<CalendarEvent>) => {
+    setEvents(prev => prev.map(e => 
+      e.id === id ? { ...e, ...updatedFields } : e
+    ));
+  }
+
+
+
+
+
+  const deleteEvent = (id: string) => {
+    setEvents(prev => prev.filter(e => e.id !== id));
+  };
+
+  const toggleEventCompletion = (id: string) => {
+    setEvents(prev => prev.map(e => 
+      e.id === id ? { ...e, isCompleted: !e.isCompleted } : e
+    ));
+  };
+
+
+
 
 
 
@@ -122,12 +185,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider value={{ 
       tasks, 
       workflows, 
+      events,
       addWorkflow, 
       updateWorkflow, 
       deleteWorkflow ,
-        addTask: addTask,
-        updateTask: updateTask,
-        deleteTask: deleteTask
+      addTask,
+      updateTask,
+      deleteTask,
+      addEvent, 
+      updateEvent,
+      deleteEvent, 
+      toggleEventCompletion 
     }}>
       {children}
     </DataContext.Provider>
