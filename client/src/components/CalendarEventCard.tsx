@@ -1,4 +1,5 @@
-import { CalendarEvent } from  "@/data/context/DataContext";
+import { CalendarEvent } from  "@/components/data/context/DataContext";
+
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit } from "lucide-react";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function CalendarEventCard({ event, onEdit, onDelete }: Props) {
+    
   return (
     <div 
       className={cn(

@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableTaskItem from '@/components/SortableTaskItem';
-import { Task, useData, Workflow } from "@/data/context/DataContext";
+import { Task, useData, Workflow } from "@/components/data/context/DataContext";
 
 
 

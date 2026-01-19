@@ -6,8 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import WorkflowForm from "@/components/WorkflowForm";
 import { WorkflowCard } from "@/components/WorkflowCard";
 import { useState } from "react";
-import { Workflow } from "@/data/context/DataContext";
-import {useData} from "@/data/context/DataContext";
+import { Workflow } from "@/components/data/context/DataContext";
+import {useData} from "@/components/data/context/DataContext";
 
 // --- Sortable Item Component ---
 

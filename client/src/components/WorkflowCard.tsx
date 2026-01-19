@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, ArrowRight, Layers, Edit } from "lucide-react"; // Added Edit icon
 import { useToast } from "@/hooks/use-toast";
-import { useData,Workflow } from "@/data/context/DataContext";
+import { useData,Workflow } from "@/components/data/context/DataContext";
 
 
 // Define what this card needs to receive

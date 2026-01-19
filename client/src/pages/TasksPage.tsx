@@ -1,13 +1,13 @@
 import { useTasks, useDeleteTask } from "@/hooks/use-tasks";
 import { TaskForm } from "@/components/TaskForm";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Task } from "@/data/context/DataContext";
+import { Task } from "@/components/data/context/DataContext";
 import { Clock, MoreVertical, Trash2, Edit } from "lucide-react";
 import TasksCards from "../components/TaskCard";
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useData } from "@/data/context/DataContext";
+import { useData } from "@/components/data/context/DataContext";
 
 
 

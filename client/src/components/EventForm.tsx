@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarEvent, useData } from  "@/data/context/DataContext";
+import { CalendarEvent, useData } from  "@/components/data/context/DataContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from "lucide-react";
-import{useData} from "@/data/context/DataContext";
+import{useData} from "@/components/data/context/DataContext";
 
 
 export default function Dashboard() {

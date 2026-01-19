@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useData, CalendarEvent } from  "@/data/context/DataContext";
+import { useData, CalendarEvent } from  "@/components/data/context/DataContext";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
