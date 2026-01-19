@@ -1,11 +1,13 @@
 
-import { useWorkflows, useCreateWorkflow, useDeleteWorkflow } from "@/hooks/use-workflows";
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import WorkflowForm from "@/components/WorkflowForm";
 import { WorkflowCard } from "@/components/WorkflowCard";
 import { useState } from "react";
+import { Workflow } from "@/data/context/DataContext";
+import {useData} from "@/data/context/DataContext";
 
 // --- Sortable Item Component ---
 
@@ -19,31 +21,9 @@ export default function WorkflowsPage() {
   const isLoading = false;
 
 
-const workflows = [
-    {
-      id: "1",
-      title: "Morning Routine",
-      description: "Start the day with high energy.",
-      steps: [
-        { id: 1, order: 1, task: { title: "Check Emails", duration: 15 , color: "#22c55e" } },
-        { id: 2, order: 2, task: { title: "Standup Meeting", duration: 10, color: "#eab308" } }
-      ],
-      loop: 1 // Temporary field
-    },
-    // Added a second one just so the grid looks nice
-    {
-      id: "2",
-      title: "Deep Work Block",
-      description: "Focus session for coding.",
-      steps: [
-        { id: 3, order: 1, task: { title: "Code Feature", duration: 50, color:"#E33BD2" } },
-        { id: 4, order: 2, task: { title: "Rest", duration: 10, color:"#6E4AD9" } }
-      ],
-      loop: 4
-    }
-  ];
+const workflows = useData().workflows;
  
-  const [editingWorkflow, setEditingWorkflow] = useState<any>(null);
+const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
 
 
 
@@ -67,7 +47,7 @@ const workflows = [
 
 
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {workflows.map((item) => (
 
           <WorkflowCard 

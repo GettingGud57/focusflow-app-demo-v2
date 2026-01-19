@@ -37,7 +37,7 @@ export function useCreateCalendarEvent() {
 export function useDeleteCalendarEvent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const url = buildUrl(api.calendar.delete.path, { id });
       const res = await fetch(url, {
         method: api.calendar.delete.method,

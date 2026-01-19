@@ -12,7 +12,7 @@ export function useTasks() {
   });
 }
 
-export function useTask(id: number) {
+export function useTask(id: string) {
   return useQuery({
     queryKey: [api.tasks.get.path, id],
     queryFn: async () => {
@@ -52,7 +52,7 @@ export function useCreateTask() {
 export function useUpdateTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: number } & UpdateTaskRequest) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & UpdateTaskRequest) => {
       const url = buildUrl(api.tasks.update.path, { id });
       const res = await fetch(url, {
         method: api.tasks.update.method,
@@ -70,7 +70,7 @@ export function useUpdateTask() {
 export function useDeleteTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const url = buildUrl(api.tasks.delete.path, { id });
       const res = await fetch(url, {
         method: api.tasks.delete.method,

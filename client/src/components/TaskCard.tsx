@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Task } from "@shared/schema";
+import { Task } from "@/data/context/DataContext";
+
 
 interface TaskCardProps {
   // MUST give 'task' object
@@ -16,7 +17,7 @@ interface TaskCardProps {
     // MUST give 'edit' function
   onEdit: (task: Task) => void; 
       // MUST give 'delete' function
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 

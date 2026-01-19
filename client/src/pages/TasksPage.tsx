@@ -1,12 +1,13 @@
 import { useTasks, useDeleteTask } from "@/hooks/use-tasks";
 import { TaskForm } from "@/components/TaskForm";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Task } from "@shared/schema";
+import { Task } from "@/data/context/DataContext";
 import { Clock, MoreVertical, Trash2, Edit } from "lucide-react";
 import TasksCards from "../components/TaskCard";
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/data/context/DataContext";
 
 
 
@@ -14,15 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function TasksPage() {
   const isLoading = false;
-  const tasks = [
-       { id: 1, title: "Study React", description: "Get fuked", duration: 25, color: "#3b82f6" },
-    { id: 2, title: "Fix Database", description: "Holy hell", duration: 45, color: "#ef4444" },
-  { id: 3, title: "Check Emails" ,description: "Check facebook acc", duration: 50, color: "#22c55e" },
-  { id: 4, title: "Standing meet up",description: "Explain why it doesnt work", duration: 10, color: "#eab308" },
-   { id:5 , title: "Code Feature",description: "Code the agentic ai", duration: 50,color:"#E33BD2" },
-   { id: 6, title: "Rest",description: "reflect on ur life", duration: 10, color:"#6E4AD9" }
-
-  ];
+  const { tasks } = useData();
+  
 
 
 
@@ -30,7 +24,7 @@ export default function TasksPage() {
   const { toast } = useToast();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
       await deleteMutation.mutateAsync(id);
       toast({ title: "Task deleted", description: "The task has been removed from your library." });

@@ -10,45 +10,17 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from "lucide-react";
+import{useData} from "@/data/context/DataContext";
 
 
 export default function Dashboard() {
   // 1. Data Loading (Simulated)
-  const tasksLoading = false; 
-  const tasks = [
-       { id: 1, title: "Study React", description: "Get fuked", duration: 25, color: "#3b82f6" },
-    { id: 2, title: "Fix Database", description: "Holy hell", duration: 45, color: "#ef4444" },
-  { id: 3, title: "Check Emails" ,description: "Check facebook acc", duration: 50, color: "#22c55e" },
-  { id: 4, title: "Standing meet up",description: "Explain why it doesnt work", duration: 10, color: "#eab308" },
-   { id:5 , title: "Code Feature",description: "Code the agentic ai", duration: 50,color:"#E33BD2" },
-   { id: 6, title: "Rest",description: "reflect on ur life", duration: 10, color:"#6E4AD9" }
-
-  ];
+  const tasksLoading = false;
+  const { tasks } = useData();
+  const { workflows } = useData();
 
 
-const workflows = [
-    {
-      id: "1",
-      title: "Morning Routine",
-      description: "Start the day with high energy.",
-      steps: [
-        { id: 1, order: 1, task: { title: "Check Emails", duration: 15 , color: "#22c55e" } },
-        { id: 2, order: 2, task: { title: "Standup Meeting", duration: 10, color: "#eab308" } }
-      ],
-      loop: 1 // Temporary field
-    },
-    // Added a second one just so the grid looks nice
-    {
-      id: "2",
-      title: "Deep Work Block",
-      description: "Focus session for coding.",
-      steps: [
-        { id: 3, order: 1, task: { title: "Code Feature", duration: 50, color:"#E33BD2" } },
-        { id: 4, order: 2, task: { title: "Rest", duration: 10, color:"#6E4AD9" } }
-      ],
-      loop: 4
-    }
-  ];
+
 
 
 

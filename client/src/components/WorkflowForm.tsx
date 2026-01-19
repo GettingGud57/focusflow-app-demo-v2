@@ -1,6 +1,5 @@
 
 import { useState ,useEffect} from "react";
-import { useTasks } from "@/hooks/use-tasks";
 import { useCreateWorkflow } from "@/hooks/use-workflows";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,30 +10,23 @@ import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableTaskItem from '@/components/SortableTaskItem';
+import { Task, useData, Workflow } from "@/data/context/DataContext";
 
 
 
-function WorkflowForm({ open, onOpenChange, existingData }: { open?: boolean, onOpenChange?: (open: boolean) => void, existingData?: any }) {
+function WorkflowForm({ open, onOpenChange, existingData }: { open?: boolean, onOpenChange?: (open: boolean) => void, existingData?: Workflow }) {
+ const { tasks, addWorkflow, updateWorkflow } = useData();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]); // Use random IDs for sortable items
   
   // Map sortable IDs back to actual task IDs for submission
   // Simple approach: Store { id: 'random-uuid', task: Task } in state
-  const [workflowItems, setWorkflowItems] = useState<{id: string, task: any}[]>([]);
+  const [workflowItems, setWorkflowItems] = useState<{id: string, task: Task}[]>([]);
 
-  const tasks = [
-       { id: 1, title: "Study React", description: "Get fuked", duration: 25, color: "#3b82f6" },
-    { id: 2, title: "Fix Database", description: "Holy hell", duration: 45, color: "#ef4444" },
-  { id: 3, title: "Check Emails" ,description: "Check facebook acc", duration: 50, color: "#22c55e" },
-  { id: 4, title: "Standing meet up",description: "Explain why it doesnt work", duration: 10, color: "#eab308" },
-   { id:5 , title: "Code Feature",description: "Code the agentic ai", duration: 50,color:"#E33BD2" },
-   { id: 6, title: "Rest",description: "reflect on ur life", duration: 10, color:"#6E4AD9" }
 
-  ];
 
-  
-  const create = useCreateWorkflow();
+
   const { toast } = useToast();
 
 
@@ -93,25 +85,46 @@ useEffect(() => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    //  Validation
     if (!title) return toast({ title: "Title required", variant: "destructive" });
     if (workflowItems.length === 0) return toast({ title: "Add at least one task", variant: "destructive" });
 
-    create.mutate({
+    //  format the data accroding to DataContext structure
+    const payload = {
       title,
       description,
+      loop: 1, // Default value
       steps: workflowItems.map((item, index) => ({
-        taskId: item.task.id,
-        order: index
+        id: item.id,          // Keep the ID used for sorting
+        taskId: item.task.id, // Link to original task
+        task: item.task,      //  Save the full task snapshot so colors work
+        order: index + 1      // 1-based order
       }))
-    }, {
-      onSuccess: () => {
-        toast({ title: "Workflow created" });
-        onOpenChange?.(false);
-        setTitle("");
-        setDescription("");
-        setWorkflowItems([]);
-      }
-    });
+    };
+
+
+    
+    if (existingData) {
+        // --- UPDATE EXISTING ---
+      updateWorkflow(existingData.id, payload);
+      toast({ title: "Workflow updated" });
+    } else {
+      // --- CREATE NEW ---
+      addWorkflow(payload);
+      toast({ title: "Workflow created" });
+    }
+
+
+    onOpenChange?.(false); // Close the window
+
+    if (!existingData) { //Clear form if we are creating new
+      setTitle("");
+      setDescription("");
+      setWorkflowItems([]);
+    }
+
+
+
   };
 
   return (
@@ -201,9 +214,10 @@ useEffect(() => {
                  <span>Total Duration:</span>
                  <span>{workflowItems.reduce((acc, curr) => acc + curr.task.duration, 0)} mins</span>
                </div>
-               <Button type="submit" className="w-full font-bold" disabled={create.isPending}>
-                 {create.isPending ? "Creating..." : "Save Workflow"}
-               </Button>
+               <Button type="submit" className="w-full font-bold">
+                    Save Workflow
+                </Button>
+
             </div>
           </div>
         </form>

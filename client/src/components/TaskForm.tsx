@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState ,useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskSchema, type CreateTaskRequest } from "@shared/schema";
-import { useCreateTask, useUpdateTask } from "@/hooks/use-tasks";
+import {Task,useData} from "@/data/context/DataContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,30 +9,39 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
 
 type Props = {
-  existingTask?: { id: number } & CreateTaskRequest;
+  existingTask?: Task;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
 
-// Form needs coerced numbers
-const formSchema = insertTaskSchema.extend({
+// Form schema for validation
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
   duration: z.coerce.number().min(1, "Duration must be at least 1 minute"),
+  color: z.string().default("#3b82f6"),
 });
 
+type TaskFormValues = z.infer<typeof formSchema>;
+
 export function TaskForm({ existingTask, trigger, open: controlledOpen, onOpenChange }: Props) {
-  const [internalOpen, setInternalOpen] = useState(false);
+
+
+    const {toast} = useToast();
+    const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = controlledOpen ?? internalOpen;
   const setIsOpen = onOpenChange ?? setInternalOpen;
+  const { addTask, updateTask } = useData();
 
-  const create = useCreateTask();
-  const update = useUpdateTask();
 
-  const form = useForm<CreateTaskRequest>({
+
+  const form = useForm<TaskFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: existingTask ?? {
+    defaultValues:  {
       title: "",
       description: "",
       duration: 25,
@@ -41,23 +49,34 @@ export function TaskForm({ existingTask, trigger, open: controlledOpen, onOpenCh
     },
   });
 
-  const onSubmit = (data: CreateTaskRequest) => {
-    if (existingTask) {
-      update.mutate(
-        { id: existingTask.id, ...data },
-        { onSuccess: () => setIsOpen(false) }
-      );
-    } else {
-      create.mutate(data, {
-        onSuccess: () => {
-          setIsOpen(false);
-          form.reset();
-        },
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset(existingTask ?? {
+        title: "",
+        description: "",
+        duration: 25,
+        color: "#f97316",
       });
     }
-  };
+  }, [existingTask, isOpen, form]);
 
-  const isPending = create.isPending || update.isPending;
+  
+  const onSubmit = (data: TaskFormValues) => {
+    if (existingTask) {
+      // Edit Mode
+      updateTask(existingTask.id, data);
+      toast({ title: "Task updated successfully" });
+    } else {
+      // Create Mode
+      addTask(data);
+      toast({ title: "New task created" });
+    }
+    
+    // Close modal
+    setIsOpen(false);
+  };
+  
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -127,13 +146,10 @@ export function TaskForm({ existingTask, trigger, open: controlledOpen, onOpenCh
           </div>
 
           <div className="flex justify-end pt-2">
-            <Button 
-              type="submit" 
-              disabled={isPending}
-              className="w-full md:w-auto rounded-xl font-semibold bg-primary hover:bg-primary/90"
-            >
-              {isPending ? "Saving..." : existingTask ? "Save Changes" : "Create Task"}
-            </Button>
+          <Button type="submit" className="w-full">
+            {existingTask ? "Save Changes" : "Create Task"}
+          </Button>
+
           </div>
         </form>
       </DialogContent>

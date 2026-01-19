@@ -169,3 +169,6 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
   }
   return url;
 }
+
+// Export request types for hooks
+export type { CreateTaskRequest, UpdateTaskRequest, CreateWorkflowRequest, UpdateWorkflowRequest, CreateCalendarEventRequest, UpdateCalendarEventRequest } from './schema';

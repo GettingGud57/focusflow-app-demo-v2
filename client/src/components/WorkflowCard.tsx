@@ -4,21 +4,22 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, ArrowRight, Layers, Edit } from "lucide-react"; // Added Edit icon
 import { useToast } from "@/hooks/use-toast";
-import { useDeleteWorkflow } from "@/hooks/use-workflows"; 
+import { useData,Workflow } from "@/data/context/DataContext";
+
 
 // Define what this card needs to receive
 interface WorkflowCardProps {
-  wf: any; // You can replace 'any' with your Workflow type later
-  onEdit: (workflow: any) => void;
+  wf: Workflow;
+  onEdit: (workflow: Workflow) => void;
 }
 
 export function WorkflowCard({ wf, onEdit }: WorkflowCardProps) {
   // 1. BRING THE HOOKS INSIDE
   const { toast } = useToast();
-  const deleteMutation = useDeleteWorkflow();
+  const {deleteWorkflow} = useData();
 
   return (
-    // 2. REMOVE 'key={wf.id}' FROM HERE (It belongs in the parent)
+    // no need  'key={wf.id}' (it belongs in workflowpage)
     <Card className="group p-6 rounded-2xl border transition-all hover:shadow-lg bg-white">
       <div className="flex justify-between items-start mb-4">
         {/* Left Side: Icon & Title */}
@@ -50,10 +51,10 @@ export function WorkflowCard({ wf, onEdit }: WorkflowCardProps) {
             size="icon"
             className="text-muted-foreground hover:text-destructive"
             onClick={() => {
-              deleteMutation.mutate(wf.id);
+              deleteWorkflow(wf.id);
               toast({ title: "Workflow deleted" });
             }}
-            disabled={deleteMutation.isPending}
+           
           >
             <Trash2 className="w-4 h-4" />
           </Button>

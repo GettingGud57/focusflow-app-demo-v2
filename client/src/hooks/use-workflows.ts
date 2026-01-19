@@ -12,7 +12,7 @@ export function useWorkflows() {
   });
 }
 
-export function useWorkflow(id: number) {
+export function useWorkflow(id: string) {
   return useQuery({
     queryKey: [api.workflows.get.path, id],
     queryFn: async () => {
@@ -46,7 +46,7 @@ export function useCreateWorkflow() {
 export function useUpdateWorkflow() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: number } & UpdateWorkflowRequest) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & UpdateWorkflowRequest) => {
       const url = buildUrl(api.workflows.update.path, { id });
       const res = await fetch(url, {
         method: api.workflows.update.method,
@@ -66,7 +66,7 @@ export function useUpdateWorkflow() {
 export function useDeleteWorkflow() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const url = buildUrl(api.workflows.delete.path, { id });
       const res = await fetch(url, {
         method: api.workflows.delete.method,

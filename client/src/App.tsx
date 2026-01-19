@@ -9,6 +9,7 @@ import TasksPage from "@/pages/TasksPage";
 import WorkflowsPage from "@/pages/WorkflowsPage";
 import CalendarPage from "@/pages/CalendarPage";
 import NotFound from "@/pages/not-found";
+import { DataProvider } from "@/data/context/DataContext";
 
 function Router() {
   return (
@@ -31,8 +32,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <DataProvider>
         <Toaster />
         <Router />
+        </DataProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

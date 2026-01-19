@@ -47,7 +47,7 @@ function AddEventDialog({ date, children }: { date: Date, children: React.ReactN
       startTime: startTime.toISOString() as any, // Zod schema handles coercion if set up, but we'll send ISO string
       duration,
       type,
-      referenceId: parseInt(refId),
+      referenceId: refId,
       isCompleted: false
     }, {
       onSuccess: () => {

@@ -5,7 +5,7 @@ import { relations } from "drizzle-orm";
 
 // === TABLE DEFINITIONS ===
 export const tasks = pgTable("tasks", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
   duration: integer("duration").notNull(), // in minutes
@@ -13,25 +13,25 @@ export const tasks = pgTable("tasks", {
 });
 
 export const workflows = pgTable("workflows", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
 });
 
 export const workflowSteps = pgTable("workflow_steps", {
-  id: serial("id").primaryKey(),
-  workflowId: integer("workflow_id").notNull(),
-  taskId: integer("task_id").notNull(),
+  id: text("id").primaryKey(),
+  workflowId: text("workflow_id").notNull(),
+  taskId: text("task_id").notNull(),
   order: integer("order").notNull(),
 });
 
 export const calendarEvents = pgTable("calendar_events", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey(),
   title: text("title").notNull(),
   startTime: timestamp("start_time").notNull(),
   duration: integer("duration").notNull(), // in minutes
   type: text("type").notNull(), // 'task' or 'workflow'
-  referenceId: integer("reference_id"), // id of task or workflow
+  referenceId: text("reference_id"), // id of task or workflow
   isCompleted: boolean("is_completed").default(false),
 });
 
@@ -80,8 +80,8 @@ export type WorkflowWithSteps = Workflow & { steps: (WorkflowStep & { task: Task
 export type CreateTaskRequest = InsertTask;
 export type UpdateTaskRequest = Partial<InsertTask>;
 
-export type CreateWorkflowRequest = InsertWorkflow & { steps: { taskId: number; order: number }[] };
-export type UpdateWorkflowRequest = Partial<InsertWorkflow> & { steps?: { taskId: number; order: number }[] };
+export type CreateWorkflowRequest = InsertWorkflow & { steps: { taskId: string; order: number }[] };
+export type UpdateWorkflowRequest = Partial<InsertWorkflow> & { steps?: { taskId: string; order: number }[] };
 
 export type CreateCalendarEventRequest = InsertCalendarEvent;
 export type UpdateCalendarEventRequest = Partial<InsertCalendarEvent>;
