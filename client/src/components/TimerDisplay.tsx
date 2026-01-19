@@ -9,6 +9,7 @@ type TimerState = "idle" | "running" | "paused" | "buffer" | "completed";
 interface TimerDisplayProps {
   durationMinutes: number;
   taskTitle: string;
+  taskDescription?: string;
   onComplete: () => void;
   onSkip?: () => void;
   color?: string;
@@ -18,7 +19,7 @@ interface TimerDisplayProps {
 
 
 
-export function TimerDisplay({ durationMinutes, taskTitle, onComplete, onSkip, color = "#f97316", footer }: TimerDisplayProps) {
+export function TimerDisplay({ durationMinutes, taskTitle, taskDescription, onComplete, onSkip, color = "#f97316", footer }: TimerDisplayProps) {
   // Convert minutes to seconds for internal logic
   const [timeLeft, setTimeLeft] = useState(durationMinutes * 60);
   const [bufferTime, setBufferTime] = useState(10); // 10 seconds buffer
@@ -95,8 +96,14 @@ export function TimerDisplay({ durationMinutes, taskTitle, onComplete, onSkip, c
 
   return (
     <div className="flex flex-col items-center justify-center p-8 w-full max-w-xl mx-auto">
-
-
+      <div className="mb-8 text-center space-y-1">
+        <h2 className="text-2xl font-bold tracking-tight">{taskTitle}</h2>
+        {taskDescription && (
+          <p className="text-sm text-muted-foreground max-w-xs mx-auto line-clamp-2">
+            {taskDescription}
+          </p>
+        )}
+      </div>
 
       <div className="relative w-72 h-72 md:w-96 md:h-96 flex items-center justify-center">
         {/* Background Ring */}

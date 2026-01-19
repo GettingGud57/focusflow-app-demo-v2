@@ -1,9 +1,7 @@
 import { useCalendarEvents, useCreateCalendarEvent, useDeleteCalendarEvent } from "@/hooks/use-calendar";
-import { useTasks } from "@/hooks/use-tasks";
-import { useWorkflows } from "@/hooks/use-workflows";
+import{useData,Task,Workflow} from "@/data/context/DataContext";
 import { useState } from "react";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addDays, startOfDay, addHours } from "date-fns";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,8 +16,13 @@ function AddEventDialog({ date, children }: { date: Date, children: React.ReactN
   const [hour, setHour] = useState("09:00");
   const [open, setOpen] = useState(false);
 
-  const { data: tasks } = useTasks();
-  const { data: workflows } = useWorkflows();
+  const { tasks } = useData();
+  const { workflows } = useData();
+
+
+
+
+
   const create = useCreateCalendarEvent();
   const { toast } = useToast();
 

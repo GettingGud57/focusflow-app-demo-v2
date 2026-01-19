@@ -76,7 +76,7 @@ export default function Dashboard() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold">Focus Mode</h1>
-          <p className="text-muted-foreground">Select a task or workflow to begin.</p>
+          {!currentTask && <p className="text-muted-foreground">Select a task or workflow to begin.</p>}
         </div>
         <Tabs value={mode} onValueChange={(v: any) => session.actions.setMode(v)}>
           <TabsList className="grid w-full grid-cols-2 h-12">
@@ -94,6 +94,7 @@ export default function Dashboard() {
             <TimerDisplay 
               durationMinutes={currentTask.duration} 
               taskTitle={currentTask.title}
+              taskDescription={currentTask.description}
               color={currentTask.color}
               onComplete={session.actions.advance}
               onSkip={session.actions.advance}

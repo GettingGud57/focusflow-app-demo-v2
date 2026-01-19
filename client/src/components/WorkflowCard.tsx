@@ -29,7 +29,10 @@ export function WorkflowCard({ wf, onEdit }: WorkflowCardProps) {
           </div>
           <div>
             <h3 className="font-bold text-lg">{wf.title}</h3>
-            <p className="text-xs text-muted-foreground">{wf.steps.length} steps</p>
+            <p className="text-xs text-muted-foreground">
+              {wf.steps.length} steps
+              {wf.loop && wf.loop > 1 ? ` · ${wf.loop} cycles` : ''}
+            </p>
           </div>
         </div>
 

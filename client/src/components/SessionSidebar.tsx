@@ -8,7 +8,7 @@ export function SessionSidebar({ mode, tasks, workflows, selectedId, onSelect, a
   // Helper to keep the JSX clean
   const items = mode === "single" 
     ? tasks.map((t: any) => ({ id: t.id, label: t.title, subLabel: `${t.duration}m`, color: t.color }))
-    : workflows.map((w: any) => ({ id: w.id, label: w.title, subLabel: `${w.steps.length} steps` }));
+    : workflows.map((w: any) => ({ id: w.id, label: w.title, subLabel: `${w.steps.length} steps${w.loop > 1 ? ` · ${w.loop} cycles` : ''}` }));
 
   return (
     <div className="space-y-6">

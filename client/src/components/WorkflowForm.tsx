@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -18,6 +18,7 @@ function WorkflowForm({ open, onOpenChange, existingData }: { open?: boolean, on
  const { tasks, addWorkflow, updateWorkflow } = useData();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [loops, setLoops] = useState(1);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]); // Use random IDs for sortable items
   
   // Map sortable IDs back to actual task IDs for submission
@@ -35,6 +36,7 @@ useEffect(() => {
     if (existingData) {
       // EDIT MODE: Fill the form with the existing data
       setTitle(existingData.title);
+      setLoops(existingData.loop || 1);
       setDescription(existingData.description || "");
       
       // Transform the saved steps back into the draggable format
@@ -48,6 +50,7 @@ useEffect(() => {
     } else {
       // CREATE MODE: Clear everything (clean slate)
       setTitle("");
+      setLoops(1);
       setDescription("");
       setWorkflowItems([]);
     }
@@ -93,7 +96,7 @@ useEffect(() => {
     const payload = {
       title,
       description,
-      loop: 1, // Default value
+      loop: loops||1, // Use the state value for loops
       steps: workflowItems.map((item, index) => ({
         id: item.id,          // Keep the ID used for sorting
         taskId: item.task.id, // Link to original task
@@ -119,6 +122,7 @@ useEffect(() => {
 
     if (!existingData) { //Clear form if we are creating new
       setTitle("");
+      setLoops(1);
       setDescription("");
       setWorkflowItems([]);
     }
@@ -209,15 +213,42 @@ useEffect(() => {
               </DndContext>
             )}
 
-            <div className="pt-4 border-t border-border/50">
-               <div className="flex justify-between text-sm font-medium mb-4">
+            <div className="pt-4 border-t border-border/50 space-y-4">
+               <div className="flex items-center justify-between">
+                 <Label className="text-sm font-medium text-muted-foreground">Repeat Cycles</Label>
+                 <div className="flex items-center gap-1 bg-secondary/30 backdrop-blur-sm px-2 py-1 rounded-full border border-black/5 dark:border-white/5">
+                   <Button 
+                     type="button"
+                     variant="ghost" 
+                     size="icon"
+                     className="h-6 w-6 text-muted-foreground hover:bg-foreground/10"
+                     onClick={() => setLoops(prev => Math.max(1, prev - 1))}
+                     disabled={loops <= 1}
+                   >
+                     <Minus className="w-3 h-3" />
+                   </Button>
+                   <span className="text-xs font-medium text-muted-foreground tabular-nums px-2 select-none min-w-[60px] text-center">
+                      {loops} {loops === 1 ? 'Cycle' : 'Cycles'}
+                   </span>
+                   <Button 
+                     type="button" 
+                     variant="ghost" 
+                     size="icon"
+                     className="h-6 w-6 text-muted-foreground hover:bg-foreground/10"
+                     onClick={() => setLoops(prev => Math.min(99, prev + 1))}
+                   >
+                     <Plus className="w-3 h-3" />
+                   </Button>
+                 </div>
+               </div>
+
+               <div className="flex justify-between text-sm font-medium">
                  <span>Total Duration:</span>
-                 <span>{workflowItems.reduce((acc, curr) => acc + curr.task.duration, 0)} mins</span>
+                 <span>{workflowItems.reduce((acc, curr) => acc + curr.task.duration, 0) * loops} mins</span>
                </div>
                <Button type="submit" className="w-full font-bold">
-                    Save Workflow
-                </Button>
-
+                 {existingData ? "Save Changes" : "Create Workflow"}
+               </Button>
             </div>
           </div>
         </form>
