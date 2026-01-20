@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useData, CalendarEvent } from  "@/components/data/context/DataContext";
+import { useData, CalendarEvent} from  "@/components/data/context/DataContext";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -14,13 +14,23 @@ import { EventForm } from "@/components/EventForm";
 
 
 export default function CalendarPage() {
-  const { events, deleteEvent } = useData();
+  const { events, deleteEvent,pendingData } = useData();
+
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // STATE FOR POPUP
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
+
+
+  const allEvents = [
+    ...events.map(e => ({ ...e, isPending: false })),
+    ...(pendingData?.events || []).map(e => ({ ...e, isPending: true }))
+  ];
+
+
+
 
   const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
   const endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -51,7 +61,7 @@ export default function CalendarPage() {
 
       <div className="flex-1 grid grid-cols-7 gap-px bg-muted/20 border rounded-2xl overflow-hidden">
         {days.map((day) => {
-          const dayEvents = events.filter(e => isSameDay(e.startTime, day))
+          const dayEvents = allEvents.filter(e => isSameDay(e.startTime, day))
                                   .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
           
           return (
@@ -64,9 +74,11 @@ export default function CalendarPage() {
               <div className="flex-1 p-2 space-y-2 overflow-y-auto">
 
                 {dayEvents.map(event => (
+
                   <CalendarEventCard 
                     key={event.id} 
                     event={event} 
+                    isPending={event.isPending}
                     onEdit={handleEdit}     //  Pass handler
                     onDelete={deleteEvent}  // Pass handler
                   />

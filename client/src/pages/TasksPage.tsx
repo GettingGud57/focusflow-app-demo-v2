@@ -1,10 +1,8 @@
-import { useTasks, useDeleteTask } from "@/hooks/use-tasks";
 import { TaskForm } from "@/components/TaskForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Task } from "@/components/data/context/DataContext";
-import { Clock, MoreVertical, Trash2, Edit } from "lucide-react";
+import { Clock } from "lucide-react";
 import TasksCards from "../components/TaskCard";
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/components/data/context/DataContext";
@@ -15,22 +13,22 @@ import { useData } from "@/components/data/context/DataContext";
 
 export default function TasksPage() {
   const isLoading = false;
-  const { tasks } = useData();
-  
+  const { tasks,pendingData,deleteTask  } = useData();
+
+
+  const allTasks = [...tasks.map(task => ({...task, isPending: false})),
+                    ...(pendingData?.tasks || []).map(task => ({...task, isPending: true}))];
 
 
 
-  const deleteMutation = useDeleteTask();
+
   const { toast } = useToast();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteMutation.mutateAsync(id);
-      toast({ title: "Task deleted", description: "The task has been removed from your library." });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to delete task", variant: "destructive" });
-    }
+
+  const handleDelete = (id: string) => {
+    deleteTask(id);
+    toast({ title: "Task deleted", description: "The task has been removed from your library." });
   };
 
   if (isLoading) {
@@ -70,10 +68,11 @@ export default function TasksPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
 
-      {tasks?.map((task) => (
+      {allTasks.map((task) => (
        <TasksCards 
          key={task.id} 
-         task={task} 
+         task={task}
+         isPending={task.isPending}
          onEdit={setEditingTask} 
          onDelete={handleDelete} 
        />

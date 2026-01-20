@@ -39,6 +39,24 @@ export type CalendarEvent = {
 
 
 
+
+export type ChatMessage = {
+  id: string;
+  role: 'user' | 'ai';
+  text: string;
+  timestamp: Date;
+};
+
+
+
+export type PendingDataPayload = {
+  tasks: Task[];
+  workflows: Workflow[];
+  events: CalendarEvent[];
+};
+
+
+
 interface DataContextType {
   tasks: Task[];
   workflows: Workflow[];
@@ -55,7 +73,27 @@ interface DataContextType {
   updateEvent: (id: string, event: Partial<CalendarEvent>) => void;
   deleteEvent: (id: string) => void;
   toggleEventCompletion: (id: string) => void;
+  messages: ChatMessage[]; 
+  addMessage: (role: 'user' | 'ai', text: string) => void;
 }
+
+interface DataContextType {
+  pendingData: PendingDataPayload | null;
+
+  // [CLEANER] And here
+  proposeChanges: (data: Partial<PendingDataPayload>) => void; // Partial lets you pass just tasks if you want
+  confirmChanges: () => void;
+  discardChanges: () => void;
+
+
+
+}
+
+
+
+
+
+
 
 const INITIAL_TASKS: Task[] =  [
        { id: "1", title: "Study React", description: "Get fuked", duration: 25, color: "#3b82f6" },
@@ -106,6 +144,17 @@ const INITIAL_EVENTS: CalendarEvent[] = [
 
 
 
+const INITIAL_MESSAGES: ChatMessage[] = [
+    { 
+      id: "welcome", 
+      role: "ai", 
+      text: "Hello! I'm your productivity architect. Try asking for a 'morning routine' or 'biology study'.", 
+      timestamp: new Date() 
+    }
+  ];
+
+
+
 
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -115,6 +164,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [workflows, setWorkflows] = useState<Workflow[]>(INITIAL_WORKFLOWS);
   const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
+  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [pendingData, setPendingData] = useState<PendingDataPayload | null>(null);
 
   // --- ACTIONS ---
 
@@ -162,9 +213,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
 
-
-
-
   const deleteEvent = (id: string) => {
     setEvents(prev => prev.filter(e => e.id !== id));
   };
@@ -178,14 +226,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
 
+  const addMessage = (role: 'user' | 'ai', text: string) => {
+    // 1. Generate ID
+    const id = Math.random().toString(36).substr(2, 9);
+    
+    // 2. Add to list (For BOTH user and AI)
+    setMessages(prev => [...prev, { id, role, text, timestamp: new Date() }]);
+  };
 
+  const proposeChanges = (data: { tasks?: Task[], workflows?: Workflow[], events?: CalendarEvent[] }) => {
+    setPendingData({
+      tasks: data.tasks || [],
+      workflows: data.workflows || [],
+      events: data.events || []
+    });
+  };
 
+  const confirmChanges = () => {
+    if (!pendingData) return;
+    
+    // Commit to real database
+    if (pendingData.tasks.length > 0) setTasks(prev => [...prev, ...pendingData.tasks]);
+    if (pendingData.workflows.length > 0) setWorkflows(prev => [...prev, ...pendingData.workflows]);
+    if (pendingData.events.length > 0) setEvents(prev => [...prev, ...pendingData.events]);
+
+    // Clear ghost data
+    setPendingData(null);
+  };
+
+  const discardChanges = () => {
+    setPendingData(null);
+  };
 
   return (
     <DataContext.Provider value={{ 
       tasks, 
       workflows, 
       events,
+      messages,
+      pendingData,
       addWorkflow, 
       updateWorkflow, 
       deleteWorkflow ,
@@ -195,7 +274,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addEvent, 
       updateEvent,
       deleteEvent, 
-      toggleEventCompletion 
+      toggleEventCompletion,
+      addMessage,
+      proposeChanges,
+      confirmChanges,
+      discardChanges
+
+
     }}>
       {children}
     </DataContext.Provider>

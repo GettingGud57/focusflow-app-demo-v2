@@ -9,11 +9,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Task } from "@/components/data/context/DataContext";
+import { cn } from "@/lib/utils";
 
 
 interface TaskCardProps {
   // MUST give 'task' object
   task: Task; 
+
+  isPending?: boolean;
     // MUST give 'edit' function
   onEdit: (task: Task) => void; 
       // MUST give 'delete' function
@@ -21,11 +24,14 @@ interface TaskCardProps {
 }
 
 
-export default function TasksCards({ task, onEdit, onDelete }: TaskCardProps) {
+export default function TasksCards({ task, isPending, onEdit, onDelete }: TaskCardProps) {
     return (
         <Card 
               key={task.id} 
-              className="group relative p-6 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 bg-white overflow-hidden"
+              className={cn(
+                "group relative p-6 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 bg-white overflow-hidden",
+                isPending && "bg-red-50 border-red-300 ring-2 ring-red-200"
+              )}
             >
               <div 
                 className="absolute top-0 left-0 w-1.5 h-full transition-all"
@@ -37,7 +43,7 @@ export default function TasksCards({ task, onEdit, onDelete }: TaskCardProps) {
                   <Clock className="w-3 h-3" />
                   {task.duration} mins
                 </div>
-                
+                {!isPending && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
@@ -53,6 +59,7 @@ export default function TasksCards({ task, onEdit, onDelete }: TaskCardProps) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                )}
               </div>
 
               <div className="pl-2">

@@ -5,24 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Trash2, ArrowRight, Layers, Edit } from "lucide-react"; // Added Edit icon
 import { useToast } from "@/hooks/use-toast";
 import { useData,Workflow } from "@/components/data/context/DataContext";
+import {cn} from "@/lib/utils";
 
 
 // Define what this card needs to receive
 interface WorkflowCardProps {
   wf: Workflow;
+  isPending?: boolean;
   onEdit: (workflow: Workflow) => void;
 }
 
-export function WorkflowCard({ wf, onEdit }: WorkflowCardProps) {
+export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
   // 1. BRING THE HOOKS INSIDE
   const { toast } = useToast();
   const {deleteWorkflow} = useData();
 
   return (
     // no need  'key={wf.id}' (it belongs in workflowpage)
-    <Card className="group p-6 rounded-2xl border transition-all hover:shadow-lg bg-white">
+    <Card className={cn(
+      "group p-6 rounded-2xl border transition-all hover:shadow-lg bg-white",
+      isPending && "bg-red-50 border-red-300 ring-2 ring-red-200"
+    )}>
       <div className="flex justify-between items-start mb-4">
         {/* Left Side: Icon & Title */}
+
         <div className="flex items-center gap-2">
           <div className="p-2 bg-primary/10 rounded-lg text-primary">
             <Layers className="w-5 h-5" />
@@ -36,7 +42,11 @@ export function WorkflowCard({ wf, onEdit }: WorkflowCardProps) {
           </div>
         </div>
 
+
+     
+
         {/* Right Side: Actions */}
+        {!isPending && (
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {/* Edit Button */}
           <Button 
@@ -62,7 +72,9 @@ export function WorkflowCard({ wf, onEdit }: WorkflowCardProps) {
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
+        )}
       </div>
+
 
       <p className="text-sm text-muted-foreground mb-6 line-clamp-2 min-h-[2.5em]">
         {wf.description || "No description provided."}

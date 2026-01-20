@@ -1,7 +1,4 @@
 
-
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import WorkflowForm from "@/components/WorkflowForm";
 import { WorkflowCard } from "@/components/WorkflowCard";
@@ -21,9 +18,13 @@ export default function WorkflowsPage() {
   const isLoading = false;
 
 
-const workflows = useData().workflows;
+const {workflows,pendingData }= useData();
  
 const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
+
+
+const allWorkflows = [...workflows.map(wf => ({...wf, isPending: false})),
+                       ...(pendingData?.workflows || []).map(wf => ({...wf, isPending: true}))];
 
 
 
@@ -48,13 +49,15 @@ const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
 
 
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {workflows.map((item) => (
+    {allWorkflows.map((item) => (  
+  <WorkflowCard 
+    key={item.id}             
+    wf={item} 
+    isPending={item.isPending} 
+    onEdit={setEditingWorkflow} 
+  />
+))}
 
-          <WorkflowCard 
-             wf={item} 
-             onEdit={setEditingWorkflow} 
-          />
-       ))}
 
        {editingWorkflow && (
   <WorkflowForm 
@@ -69,13 +72,6 @@ const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
 
 
       </div>
-
-
-
-
-
-
-
     </div>
   );
 }
