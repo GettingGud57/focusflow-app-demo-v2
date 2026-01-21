@@ -27,10 +27,38 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   // Check if THIS task is the one running globally
   const isGloballyRunning = activeTimer?.taskId === taskId;
   
+  // ============================================================
+  // SMART INITIAL STATE: Calculate correct values on first render
+  // ============================================================
+  // This fixes the "inaccurate time after navigation" bug.
+  // Instead of defaulting to full duration and relying on useEffect to fix it,
+  // we calculate the correct initial values immediately.
+  
+  const getInitialTimeLeft = () => {
+    if (activeTimer?.taskId === taskId) {
+      const now = Date.now();
+      const secondsPassed = Math.floor((now - activeTimer.startTime) / 1000);
+      const totalSeconds = activeTimer.totalDuration * 60;
+      return Math.max(0, totalSeconds - secondsPassed);
+    }
+    return durationMinutes * 60;
+  };
+
+  const getInitialState = (): TimerState => {
+    if (activeTimer?.taskId === taskId) {
+      const now = Date.now();
+      const secondsPassed = Math.floor((now - activeTimer.startTime) / 1000);
+      const totalSeconds = activeTimer.totalDuration * 60;
+      const remaining = totalSeconds - secondsPassed;
+      return remaining > 0 ? "running" : "buffer";
+    }
+    return "idle";
+  };
+
   // Convert minutes to seconds for internal logic
-  const [timeLeft, setTimeLeft] = useState(durationMinutes * 60);
+  const [timeLeft, setTimeLeft] = useState(getInitialTimeLeft);
   const [bufferTime, setBufferTime] = useState(10); // 10 seconds buffer
-  const [state, setState] = useState<TimerState>("idle");
+  const [state, setState] = useState<TimerState>(getInitialState);
   
   // Use a ref for the interval to clear it easily
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -168,6 +196,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     setTimeLeft(minutes * 60);
     setBufferTime(10);
     setState("running");
+    startTimer(taskId, minutes);
   };
 
   const formatTime = (seconds: number) => {

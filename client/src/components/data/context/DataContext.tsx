@@ -12,7 +12,7 @@ export type CreateTask = Omit<Task, 'id'>;
 
 
 export type WorkflowSteps = {
-  id: string; // unique id for the list item
+  id: string; // unique id for list item
   taskId: string; // reference to the original task (pure reference, no snapshot)
   order: number;
 };
@@ -68,12 +68,17 @@ interface DataContextType {
   tasks: Task[];
   workflows: Workflow[];
   events: CalendarEvent[];
+  messages: ChatMessage[]; 
+  activeTimer: ActiveTimer;
+  pendingData: PendingDataPayload | null;
+
+
   getTaskById: (taskId: string) => Task | undefined; // Helper to look up tasks
   addWorkflow: (workflow: Omit<Workflow, 'id'>) => void;
   updateWorkflow: (id: string, workflow: Partial<Workflow>) => void;
   deleteWorkflow: (id: string) => void;
   // add addTask/updateTask later if needed // added
-  addTask: (task: Omit<Task, 'id'>) => void;
+  addTask: (task: CreateTask) => void;
   updateTask: (id: string, task: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   // calendar actions
@@ -81,21 +86,13 @@ interface DataContextType {
   updateEvent: (id: string, event: Partial<CalendarEvent>) => void;
   deleteEvent: (id: string) => void;
   toggleEventCompletion: (id: string) => void;
-  messages: ChatMessage[]; 
   addMessage: (role: 'user' | 'ai', text: string) => void;
-  activeTimer: ActiveTimer;
   startTimer: (taskId: string, duration: number) => void;
   stopTimer: () => void;
-}
-
-interface DataContextType {
-  pendingData: PendingDataPayload | null;
-
   // [CLEANER] And here
   proposeChanges: (data: Partial<PendingDataPayload>) => void; // Partial lets you pass just tasks if you want
   confirmChanges: () => void;
   discardChanges: () => void;
-
 
 
 }
@@ -109,8 +106,8 @@ interface DataContextType {
 const INITIAL_TASKS: Task[] =  [
        { id: "1", title: "Study React", description: "Get fuked", duration: 25, color: "#3b82f6" },
     { id: "2", title: "Fix Database", description: "Holy hell", duration: 45, color: "#ef4444" },
-  { id: "3", title: "Check Emails" ,description: "Check facebook acc", duration: 50, color: "#22c55e" },
-  { id: "4", title: "Standing meet up",description: "Explain why it doesnt work", duration: 10, color: "#eab308" },
+  { id: "3", title: "Check Emails" ,description: "Check facebook acc", duration: 15, color: "#22c55e" },
+  { id: "4", title: "Standing meet up",description: "Explain why it doesnt work", duration: 20, color: "#eab308" },
    { id: "5" , title: "Code Feature",description: "Code the agentic ai", duration: 50,color:"#E33BD2" },
    { id: "6", title: "Rest",description: "Reflect on your life", duration: 10, color:"#6E4AD9" }
 ];
@@ -180,7 +177,7 @@ const loadFromStorage = <T,>(key: string, fallback: T): T => {
     return fallback;
   }
 };
-
+ 
 
 export function DataProvider({ children }: { children: ReactNode }) {
   // The "Database" lives here in State
@@ -225,7 +222,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteWorkflow = (id: string) => {
     setWorkflows(prev => prev.filter(wf => wf.id !== id));
   };
-  const addTask = (newTask: Omit<Task, 'id'>) => {
+  const addTask = (newTask: CreateTask) => {
     const id = Math.random().toString(36).substr(2, 9);
     setTasks(prev => [...prev, { ...newTask, id }]);
   };

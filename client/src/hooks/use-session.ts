@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/components/data/context/DataContext";
 
@@ -112,17 +112,23 @@ export function useSession(tasks: any[], workflows: any[]) {
 
   // 3. THE SYNC EFFECT (The "Photocopier")
   // When a user picks a NEW workflow (not restoring), load its default loop count.
-  // Skip if we're restoring from a saved session with the same workflow.
-  const [hasInitialized, setHasInitialized] = useState(false);
+  // Track the previous selectedId to detect actual changes.
+  const prevSelectedIdRef = useRef<string | null>(null);
+  
   useEffect(() => {
     if (mode === "workflow" && activeItem) {
-      // Only reset if this is a NEW selection, not a restore
-      if (hasInitialized && savedSession?.selectedId !== activeItem.id) {
+      const isNewSelection = prevSelectedIdRef.current !== null && 
+                             prevSelectedIdRef.current !== activeItem.id;
+      
+      if (isNewSelection) {
+        // User switched to a DIFFERENT workflow - reset to its defaults
         setTargetLoops(activeItem.loop || 1);
         setCurrentLoopIndex(0);
         setCurrentStepIndex(0);
       }
-      setHasInitialized(true);
+      
+      // Update the ref to current ID
+      prevSelectedIdRef.current = activeItem.id;
     }
   }, [activeItem?.id, mode]);
 
