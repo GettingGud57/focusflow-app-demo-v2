@@ -13,6 +13,7 @@ import { DataProvider } from "@/components/data/context/DataContext";
 import { FloatingButton } from "./components/FloatingButton";
 import { AiSidebar } from "./components/AiSidebar";
 import { useState } from "react";
+import { StrictMode } from 'react';
 function Router() {
   const [isAiOpen, setIsAiOpen] = useState(false);
   
@@ -36,6 +37,7 @@ function Router() {
 
 function App() {
   return (
+    <StrictMode>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <DataProvider>
@@ -44,6 +46,7 @@ function App() {
         </DataProvider>
       </TooltipProvider>
     </QueryClientProvider>
+    </StrictMode>
   );
 }
 

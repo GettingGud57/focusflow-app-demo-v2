@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export type Task = {
   id: string;
@@ -13,8 +13,7 @@ export type CreateTask = Omit<Task, 'id'>;
 
 export type WorkflowSteps = {
   id: string; // unique id for the list item
-  taskId: string; // reference to the original task
-  task: Task; // snapshot of the task data
+  taskId: string; // reference to the original task (pure reference, no snapshot)
   order: number;
 };
 
@@ -57,10 +56,19 @@ export type PendingDataPayload = {
 
 
 
+export type ActiveTimer = {
+  taskId: string;
+  startTime: number; // Date.now()
+  totalDuration: number; // in minutes
+} | null;
+
+
+
 interface DataContextType {
   tasks: Task[];
   workflows: Workflow[];
   events: CalendarEvent[];
+  getTaskById: (taskId: string) => Task | undefined; // Helper to look up tasks
   addWorkflow: (workflow: Omit<Workflow, 'id'>) => void;
   updateWorkflow: (id: string, workflow: Partial<Workflow>) => void;
   deleteWorkflow: (id: string) => void;
@@ -75,6 +83,9 @@ interface DataContextType {
   toggleEventCompletion: (id: string) => void;
   messages: ChatMessage[]; 
   addMessage: (role: 'user' | 'ai', text: string) => void;
+  activeTimer: ActiveTimer;
+  startTimer: (taskId: string, duration: number) => void;
+  stopTimer: () => void;
 }
 
 interface DataContextType {
@@ -112,10 +123,10 @@ const INITIAL_WORKFLOWS: Workflow[] = [
       title: "Morning Routine",
       description: "Start the day with high energy.",
       steps: [
-        { id: "s1", taskId: "3",order: 1,task: INITIAL_TASKS[2] },
-        { id: "s2", taskId: "4", order: 2, task: INITIAL_TASKS[3] }
+        { id: "s1", taskId: "3", order: 1 },
+        { id: "s2", taskId: "4", order: 2 }
       ],
-      loop: 1 // Temporary field
+      loop: 1
     },
    
     {
@@ -123,8 +134,8 @@ const INITIAL_WORKFLOWS: Workflow[] = [
       title: "Deep Work Block",
       description: "Focus session for coding.",
       steps: [
-        { id: "s3", taskId: "5", order: 1, task: INITIAL_TASKS[4] },
-        { id: "s4",taskId: "6", order: 2, task: INITIAL_TASKS[5] }
+        { id: "s3", taskId: "5", order: 1 },
+        { id: "s4", taskId: "6", order: 2 }
       ],
       loop: 4
     }]
@@ -159,13 +170,44 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+const loadFromStorage = <T,>(key: string, fallback: T): T => {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (error) {
+    console.warn(`Error reading ${key} from localStorage`, error);
+    return fallback;
+  }
+};
+
+
 export function DataProvider({ children }: { children: ReactNode }) {
   // The "Database" lives here in State
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
-  const [workflows, setWorkflows] = useState<Workflow[]>(INITIAL_WORKFLOWS);
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [tasks, setTasks] = useState<Task[]>(() => 
+    loadFromStorage("myApp_tasks", INITIAL_TASKS)
+  );
+  
+  const [workflows, setWorkflows] = useState<Workflow[]>(() => 
+    loadFromStorage("myApp_workflows", INITIAL_WORKFLOWS)
+  );
+  const [events, setEvents] = useState<CalendarEvent[]>(() => 
+    loadFromStorage("myApp_events", INITIAL_EVENTS)
+  );
+  const [messages, setMessages] = useState<ChatMessage[]>(() => 
+    loadFromStorage("myApp_chat", INITIAL_MESSAGES) // Ensure you have INITIAL_MESSAGES defined
+  );
+  const [activeTimer, setActiveTimer] = useState<ActiveTimer>(() => 
+    loadFromStorage("myApp_timer", null)
+  );
   const [pendingData, setPendingData] = useState<PendingDataPayload | null>(null);
+
+  // --- HELPERS ---
+
+  // Look up a task by ID - used by components to get task data from workflow steps
+  const getTaskById = (taskId: string): Task | undefined => {
+    return tasks.find(t => t.id === taskId);
+  };
 
   // --- ACTIONS ---
 
@@ -258,6 +300,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setPendingData(null);
   };
 
+  const startTimer = (taskId: string, duration: number) => {
+    setActiveTimer({
+      taskId,
+      startTime: Date.now(),
+      totalDuration: duration
+    });
+  };
+
+  const stopTimer = () => {
+    setActiveTimer(null);
+  };
+
+
+  useEffect(() => {
+    localStorage.setItem("myApp_tasks", JSON.stringify(tasks));
+  }, [tasks]);
+
+  useEffect(() => {
+    localStorage.setItem("myApp_workflows", JSON.stringify(workflows));
+  }, [workflows]);
+
+  useEffect(() => {
+    localStorage.setItem("myApp_events", JSON.stringify(events));
+  }, [events]);
+
+  useEffect(() => {
+    localStorage.setItem("myApp_chat", JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem("myApp_timer", JSON.stringify(activeTimer));
+  }, [activeTimer]);
+
+
   return (
     <DataContext.Provider value={{ 
       tasks, 
@@ -265,6 +341,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       events,
       messages,
       pendingData,
+      activeTimer,
+      getTaskById,
       addWorkflow, 
       updateWorkflow, 
       deleteWorkflow ,
@@ -278,7 +356,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addMessage,
       proposeChanges,
       confirmChanges,
-      discardChanges
+      discardChanges,
+      startTimer,
+      stopTimer
 
 
     }}>

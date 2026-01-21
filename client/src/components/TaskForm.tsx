@@ -22,7 +22,22 @@ type Props = {
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  duration: z.coerce.number().min(1, "Duration must be at least 1 minute"),
+  duration: z.coerce.number()
+    // 2. TRANSFORM: Check for the secret code immediately
+    .transform((val) => {
+      if (val === -404) return 0.1;
+      return val;
+    })
+    // 3. REFINE: Apply rules to the RESULT of the transform
+    .refine((val) => {
+      // Allow the specific secret result
+      if (val === 0.1) return true;
+      
+      // Otherwise, enforce positive integers (no decimals, no negatives)
+      return Number.isInteger(val) && val > 0;
+    }, {
+      message: "Duration must be a positive whole number (unless you know the secret code)"
+    }),
   color: z.string().default("#3b82f6"),
 });
 

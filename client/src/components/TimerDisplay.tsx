@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Pause, RotateCcw, Plus, Check, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useData } from "@/components/data/context/DataContext";
 
 type TimerState = "idle" | "running" | "paused" | "buffer" | "completed";
 
 interface TimerDisplayProps {
+  taskId: string; // Now requires taskId to connect with global state
   durationMinutes: number;
   taskTitle: string;
   taskDescription?: string;
@@ -19,7 +21,12 @@ interface TimerDisplayProps {
 
 
 
-export function TimerDisplay({ durationMinutes, taskTitle, taskDescription, onComplete, onSkip, color = "#f97316", footer }: TimerDisplayProps) {
+export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescription, onComplete, onSkip, color = "#f97316", footer }: TimerDisplayProps) {
+  const { activeTimer, startTimer, stopTimer } = useData();
+  
+  // Check if THIS task is the one running globally
+  const isGloballyRunning = activeTimer?.taskId === taskId;
+  
   // Convert minutes to seconds for internal logic
   const [timeLeft, setTimeLeft] = useState(durationMinutes * 60);
   const [bufferTime, setBufferTime] = useState(10); // 10 seconds buffer
@@ -28,30 +35,96 @@ export function TimerDisplay({ durationMinutes, taskTitle, taskDescription, onCo
   // Use a ref for the interval to clear it easily
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ============================================================
+  // useEffect #1: TASK CHANGE HANDLER (Reset or Restore)
+  // ============================================================
+  // PURPOSE: Handle when the displayed task changes (user selects different task)
+  // 
+  // WHEN IT RUNS: When `taskTitle`, `durationMinutes`, `taskId`, or `activeTimer` changes
+  // 
+  // WHAT IT DOES:
+  //   - Clear any existing interval (stop the countdown)
+  //   - If this task IS the one running globally:
+  //       → Calculate actual remaining time from startTime (RESTORE STATE)
+  //       → This is the FIX for timer resetting when navigating back!
+  //   - If this task is NOT running:
+  //       → Reset to idle with full duration (FRESH START)
+  // 
+  // WHY NEEDED: When you navigate away and back, the component remounts.
+  //             Without this check, it would reset to "idle" even if timer was running.
+  //             The "magic math" (now - startTime) ensures accurate time even after navigation.
   useEffect(() => {
-    // Reset when task changes
+  // Reset when task changes, BUT check if this task is already running globally
+  if (intervalRef.current) clearInterval(intervalRef.current);
+  
+  // Check if THIS task is currently running in global state
+  if (activeTimer?.taskId === taskId) {
+    // Don't reset - calculate actual remaining time
+    const now = Date.now();
+    const secondsPassed = Math.floor((now - activeTimer.startTime) / 1000);
+    const totalSeconds = activeTimer.totalDuration * 60;
+    const remaining = Math.max(0, totalSeconds - secondsPassed);
+    
+    setTimeLeft(remaining);
+    setBufferTime(10);
+    setState(remaining > 0 ? "running" : "buffer");
+  } else if (state !== "paused") {
+    // Not running AND not paused, safe to reset
+    // (If paused, keep the current timeLeft intact!)
     setTimeLeft(durationMinutes * 60);
     setBufferTime(10);
     setState("idle");
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  }, [durationMinutes, taskTitle]);
+  }
+  // If state === "paused", do nothing - preserve timeLeft
+}, [durationMinutes, taskTitle, taskId, activeTimer]);
 
+
+
+  // ============================================================
+  // useEffect #2: INTERVAL MANAGER (The Actual Countdown)
+  // ============================================================
+  // PURPOSE: Manage the setInterval that ticks every second
+  // 
+  // WHEN IT RUNS: When `state`, `isGloballyRunning`, `activeTimer` changes
+  // 
+  // WHAT IT DOES:
+  //   - STATE = "running" + global timer active:
+  //       → Start interval that calculates remaining time every second
+  //       → Uses (now - startTime) math for drift-proof accuracy
+  //       → When time hits 0, transitions to "buffer" state
+  //   
+  //   - STATE = "buffer":
+  //       → Start interval for 10-second buffer countdown
+  //       → Gives user chance to extend time
+  //       → When buffer hits 0, calls onComplete() and stops global timer
+  //   
+  //   - ANY OTHER STATE:
+  //       → Clear the interval (stop counting)
+  // 
+  // CLEANUP: Returns a function that clears interval when effect re-runs
+  //          or component unmounts (prevents memory leaks)
   useEffect(() => {
-    if (state === "running") {
+    if (state === "running" && isGloballyRunning && activeTimer) {
+      // Use global timer for accurate time tracking
       intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            setState("buffer");
-            return 0;
-          }
-          return prev - 1;
-        });
+        const now = Date.now();
+        const secondsPassed = Math.floor((now - activeTimer.startTime) / 1000);
+        const totalSeconds = activeTimer.totalDuration * 60;
+        const remaining = totalSeconds - secondsPassed;
+
+        if (remaining <= 0) {
+          setState("buffer");
+          setTimeLeft(0);
+        } else {
+          setTimeLeft(remaining);
+        }
       }, 1000);
     } else if (state === "buffer") {
       intervalRef.current = setInterval(() => {
         setBufferTime((prev) => {
           if (prev <= 1) {
             setState("completed");
+            stopTimer(); // Stop global timer
             onComplete();
             return 0;
           }
@@ -65,17 +138,30 @@ export function TimerDisplay({ durationMinutes, taskTitle, taskDescription, onCo
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [state, onComplete]);
+  }, [state, isGloballyRunning, activeTimer, onComplete, stopTimer]);
 
   const toggleTimer = () => {
-    if (state === "idle" || state === "paused") setState("running");
-    else if (state === "running") setState("paused");
+    if (state === "idle") {
+      // Starting fresh - use full duration
+      setState("running");
+      startTimer(taskId, durationMinutes);
+    } else if (state === "paused") {
+      // Resuming from pause - use REMAINING time, not full duration
+      const remainingMinutes = timeLeft / 60;
+      setState("running");
+      startTimer(taskId, remainingMinutes);
+    } else if (state === "running") {
+      // Pausing - just pause, don't reset
+      setState("paused");
+      stopTimer();
+    }
   };
 
   const resetTimer = () => {
     setState("idle");
     setTimeLeft(durationMinutes * 60);
     setBufferTime(10);
+    stopTimer(); // Also stop the global timer
   };
 
   const extendTime = (minutes: number) => {

@@ -92,6 +92,7 @@ export default function Dashboard() {
         <Card className="glass-panel border-none p-8 flex flex-col items-center justify-center min-h-[500px] rounded-3xl relative overflow-hidden">
           {currentTask ? (
             <TimerDisplay 
+              taskId={currentTask.id}
               durationMinutes={currentTask.duration} 
               taskTitle={currentTask.title}
               taskDescription={currentTask.description}

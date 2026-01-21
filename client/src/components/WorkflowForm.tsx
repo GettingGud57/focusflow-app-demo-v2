@@ -40,11 +40,14 @@ useEffect(() => {
       setDescription(existingData.description || "");
       
       // Transform the saved steps back into the draggable format
-      // We give them new random IDs so the Drag-and-Drop system is happy
-      const restoredItems = existingData.steps.map((step: any) => ({
-        id: crypto.randomUUID(), 
-        task: step.task
-      }));
+      // Look up the actual task by taskId (pure reference)
+      const restoredItems = existingData.steps.map((step: any) => {
+        const task = tasks?.find(t => t.id === step.taskId);
+        return {
+          id: crypto.randomUUID(), 
+          task: task || { id: step.taskId, title: "Task not found", duration: 0, color: "#999" }
+        };
+      });
       setWorkflowItems(restoredItems);
 
     } else {
@@ -54,7 +57,7 @@ useEffect(() => {
       setDescription("");
       setWorkflowItems([]);
     }
-  }, [existingData, open]);
+  }, [existingData, open, tasks]);
 
 
 
@@ -99,8 +102,7 @@ useEffect(() => {
       loop: loops||1, // Use the state value for loops
       steps: workflowItems.map((item, index) => ({
         id: item.id,          // Keep the ID used for sorting
-        taskId: item.task.id, // Link to original task
-        task: item.task,      //  Save the full task snapshot so colors work
+        taskId: item.task.id, // Link to original task (pure reference, no snapshot)
         order: index + 1      // 1-based order
       }))
     };

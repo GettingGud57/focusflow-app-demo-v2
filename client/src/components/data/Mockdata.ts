@@ -49,18 +49,8 @@ export const SCENARIO_BIOLOGY: MockScenario = {
         description: "High-focus study session with testing intervals.",
         loop: 4, // (25+5) * 4 = 120 mins = 2 hours
         steps: [
-          { 
-            id: "s-b-1", 
-            taskId: "bio-1", 
-            order: 1, 
-            task: { id: "bio-1", title: "Read Bio Chapter", description: "Focus on cell structures", duration: 25, color: "#10b981" } 
-          },
-          { 
-            id: "s-b-2", 
-            taskId: "bio-2", 
-            order: 2, 
-            task: { id: "bio-2", title: "Active Recall Quiz", description: "Test memory without notes", duration: 5, color: "#f59e0b" } 
-          }
+          { id: "s-b-1", taskId: "bio-1", order: 1 },
+          { id: "s-b-2", taskId: "bio-2", order: 2 }
         ]
       }
     ],
@@ -100,9 +90,9 @@ export const SCENARIO_MORNING: MockScenario = {
         description: "Wake up body and mind.",
         loop: 1,
         steps: [
-          { id: "st-m-1", taskId: "m-1", order: 1, task: { id: "m-1", title: "Hydrate & Vitamins", duration: 5, color: "#3b82f6" } },
-          { id: "st-m-2", taskId: "m-2", order: 2, task: { id: "m-2", title: "Morning Yoga", duration: 15, color: "#ec4899" } },
-          { id: "st-m-3", taskId: "m-3", order: 3, task: { id: "m-3", title: "Day Planning", duration: 10, color: "#8b5cf6" } },
+          { id: "st-m-1", taskId: "m-1", order: 1 },
+          { id: "st-m-2", taskId: "m-2", order: 2 },
+          { id: "st-m-3", taskId: "m-3", order: 3 },
         ]
       }
     ],

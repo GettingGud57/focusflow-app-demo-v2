@@ -2,8 +2,10 @@ import { Card } from "@/components/ui/card";
 import { ItemSelect } from "@/components/ItemSelect";
 import { ListTodo, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useData } from "@/components/data/context/DataContext";
 
 export function SessionSidebar({ mode, tasks, workflows, selectedId, onSelect, activeWorkflow, currentStepIndex }: any) {
+  const { getTaskById } = useData();
   
   // Helper to keep the JSX clean
   const items = mode === "single" 
@@ -31,7 +33,9 @@ export function SessionSidebar({ mode, tasks, workflows, selectedId, onSelect, a
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Up Next</p>
             <div className="space-y-2 relative">
               <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-muted -z-10" />
-              {activeWorkflow.steps.sort((a:any, b:any) => a.order - b.order).map((step:any, idx:number) => (
+              {activeWorkflow.steps.sort((a:any, b:any) => a.order - b.order).map((step:any, idx:number) => {
+                const task = getTaskById(step.taskId);
+                return (
                 <div key={step.id} className={cn(
                     "relative flex items-center gap-3 p-3 rounded-lg border transition-all",
                     idx === currentStepIndex ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-white border-transparent opacity-50"
@@ -39,9 +43,9 @@ export function SessionSidebar({ mode, tasks, workflows, selectedId, onSelect, a
                   <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] border-2 bg-background z-10",
                       idx === currentStepIndex ? "border-primary text-primary" : "border-muted"
                   )}>{idx + 1}</div>
-                  <span className="text-sm font-medium truncate">{step.task.title}</span>
+                  <span className="text-sm font-medium truncate">{task?.title || "Task not found"}</span>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}

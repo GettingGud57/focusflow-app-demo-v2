@@ -1,19 +1,54 @@
 import { useState, useMemo, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/components/data/context/DataContext";
 
 type Mode = "single" | "workflow";
 
+// ============================================================
+// SESSION PERSISTENCE: Save/Load from localStorage
+// ============================================================
+type SessionState = {
+  mode: Mode;
+  selectedId: string;
+  currentStepIndex: number;
+  currentLoopIndex: number;
+  targetLoops: number;
+};
+
+const STORAGE_KEY = "myApp_session";
+
+const loadSession = (): SessionState | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const item = window.localStorage.getItem(STORAGE_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveSession = (state: SessionState) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+};
+
 export function useSession(tasks: any[], workflows: any[]) {
   const { toast } = useToast();
+  const { activeTimer, stopTimer, getTaskById } = useData();
   
-  // 1. Core State
-  const [mode, setMode] = useState<Mode>("single");
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  // ============================================================
+  // RESTORE SESSION: Load from localStorage on mount
+  // ============================================================
+  const savedSession = loadSession();
+  
+  // 1. Core State (with restoration)
+  const [mode, setMode] = useState<Mode>(savedSession?.mode || "single");
+  const [selectedId, setSelectedId] = useState<string>(savedSession?.selectedId || "");
+  const [currentStepIndex, setCurrentStepIndex] = useState(savedSession?.currentStepIndex || 0);
   
   // LOOP STATE: We need two. Where we are, and where we are going.
-  const [currentLoopIndex, setCurrentLoopIndex] = useState(0); // 0, 1, 2...
-  const [targetLoops, setTargetLoops] = useState(1);           // 1, 4, 10...
+  const [currentLoopIndex, setCurrentLoopIndex] = useState(savedSession?.currentLoopIndex || 0);
+  const [targetLoops, setTargetLoops] = useState(savedSession?.targetLoops || 1);
 
   // 2. Derived Data
   const activeItem = useMemo(() => {
@@ -24,16 +59,70 @@ export function useSession(tasks: any[], workflows: any[]) {
   const currentTask = useMemo(() => {
     if (!activeItem) return null;
     if (mode === "single") return activeItem;
-    return activeItem.steps[currentStepIndex]?.task;
-  }, [mode, activeItem, currentStepIndex]);
+    // For workflow: look up task by taskId (pure reference)
+    const step = activeItem.steps[currentStepIndex];
+    return step ? getTaskById(step.taskId) : null;
+  }, [mode, activeItem, currentStepIndex, getTaskById]);
+
+  // ============================================================
+  // PERSIST SESSION: Save to localStorage whenever state changes
+  // ============================================================
+  useEffect(() => {
+    saveSession({
+      mode,
+      selectedId,
+      currentStepIndex,
+      currentLoopIndex,
+      targetLoops,
+    });
+  }, [mode, selectedId, currentStepIndex, currentLoopIndex, targetLoops]);
+
+  // ============================================================
+  // AUTO-RESTORE: If there's an active timer but no selected task,
+  // find which task/workflow it belongs to and restore the session
+  // ============================================================
+  useEffect(() => {
+    if (activeTimer && !selectedId) {
+      const runningTaskId = activeTimer.taskId;
+      
+      // Check if it's a single task
+      const task = tasks?.find(t => t.id === runningTaskId);
+      if (task) {
+        setMode("single");
+        setSelectedId(task.id);
+        return;
+      }
+      
+      // Check if it's part of a workflow
+      for (const workflow of workflows || []) {
+        const stepIndex = workflow.steps?.findIndex((s: any) => s.task?.id === runningTaskId);
+        if (stepIndex !== -1) {
+          setMode("workflow");
+          setSelectedId(workflow.id);
+          // Note: currentStepIndex and loopIndex should already be restored from localStorage
+          // Only set stepIndex if it wasn't restored
+          if (currentStepIndex === 0 && savedSession?.currentStepIndex !== stepIndex) {
+            setCurrentStepIndex(stepIndex);
+          }
+          return;
+        }
+      }
+    }
+  }, [activeTimer, selectedId, tasks, workflows]);
 
   // 3. THE SYNC EFFECT (The "Photocopier")
-  // When a user picks a new workflow, load its default loop count into our editable state.
+  // When a user picks a NEW workflow (not restoring), load its default loop count.
+  // Skip if we're restoring from a saved session with the same workflow.
+  const [hasInitialized, setHasInitialized] = useState(false);
   useEffect(() => {
     if (mode === "workflow" && activeItem) {
-      setTargetLoops(activeItem.loop || 1); // Load default from DB
-      setCurrentLoopIndex(0);               // Reset progress
-      setCurrentStepIndex(0);               // Reset steps
+      // Only reset if this is a NEW selection, not a restore
+      if (hasInitialized && savedSession?.selectedId !== activeItem.id) {
+        setTargetLoops(activeItem.loop || 1);
+        setCurrentLoopIndex(0);
+        setCurrentStepIndex(0);
+      }
+      setHasInitialized(true);
     }
   }, [activeItem?.id, mode]);
 
@@ -42,6 +131,7 @@ export function useSession(tasks: any[], workflows: any[]) {
   const advance = () => {
     if (mode === "single") {
       toast({ title: "Task Complete", description: "Great job!" });
+      stopTimer(); // Stop the timer when task completes
       setSelectedId(""); 
       return;
     } 
@@ -49,15 +139,18 @@ export function useSession(tasks: any[], workflows: any[]) {
     const workflow = activeItem;
     // CRITICAL FIX: Use our editable 'targetLoops', not the read-only 'workflow.loop'
     if (workflow && currentStepIndex < workflow.steps.length - 1) {
+      stopTimer(); // Stop timer before moving to next step
       setCurrentStepIndex(prev => prev + 1); 
     } else {
         // Check against our LOCAL target
         if (currentLoopIndex < targetLoops - 1) {
+            stopTimer(); // Stop timer before starting new loop
             setCurrentLoopIndex(prev => prev + 1);
             setCurrentStepIndex(0);
             toast({ title: "Cycle Complete", description: `Starting cycle ${currentLoopIndex + 2} of ${targetLoops}` });
         } else {
             toast({ title: "Workflow Finished!", description: "You are a machine." });
+            stopTimer(); // Stop timer when workflow completes
             setSelectedId("");
         }
     }
@@ -74,6 +167,21 @@ export function useSession(tasks: any[], workflows: any[]) {
 
   // 6. PUBLIC INTERFACE
   // EXPOSE EVERYTHING THE DASHBOARD NEEDS HERE
+  
+  // ============================================================
+  // WRAPPED setSelectedId: Stop timer when switching tasks/workflows
+  // ============================================================
+  // WHY: When user actively switches to a different task, they're saying
+  //      "I'm done with the previous one". Fresh state is more intuitive.
+  // NOTE: This does NOT affect page navigation - that restores from localStorage.
+  const handleSetSelectedId = (newId: string) => {
+    // If switching to a DIFFERENT task/workflow, stop any running timer
+    if (newId !== selectedId && activeTimer) {
+      stopTimer();
+    }
+    setSelectedId(newId);
+  };
+
   return {
     state: { 
       mode, 
@@ -87,7 +195,7 @@ export function useSession(tasks: any[], workflows: any[]) {
     },
     actions: { 
       setMode, 
-      setSelectedId, 
+      setSelectedId: handleSetSelectedId, // Use wrapped version
       advance,
       // 👇 We add this so Dashboard can change them
       adjustLoops 

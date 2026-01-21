@@ -18,7 +18,7 @@ interface WorkflowCardProps {
 export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
   // 1. BRING THE HOOKS INSIDE
   const { toast } = useToast();
-  const {deleteWorkflow} = useData();
+  const { deleteWorkflow, getTaskById } = useData();
 
   return (
     // no need  'key={wf.id}' (it belongs in workflowpage)
@@ -84,17 +84,20 @@ export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview Sequence</div>
         <div className="flex items-center gap-2 overflow-hidden">
-          {wf.steps.slice(0, 3).map((step: any, i: number) => (
+          {wf.steps.slice(0, 3).map((step: any, i: number) => {
+            const task = getTaskById(step.taskId);
+            const taskTitle = task?.title || "Task not found";
+            return (
             <div key={step.id} className="flex items-center gap-2 min-w-0">
               <div 
                 className="px-2 py-1 rounded-md bg-muted text-xs whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]"
-                title={step.task.title}
+                title={taskTitle}
               >
-                {step.task.title}
+                {taskTitle}
               </div>
               {i < Math.min(wf.steps.length, 3) - 1 && <ArrowRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
             </div>
-          ))}
+          )})}
           {wf.steps.length > 3 && (
             <div className="px-2 py-1 rounded-md bg-muted text-xs text-muted-foreground">
               +{wf.steps.length - 3}
