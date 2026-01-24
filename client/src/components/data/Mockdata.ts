@@ -49,8 +49,8 @@ export const SCENARIO_BIOLOGY: MockScenario = {
         description: "High-focus study session with testing intervals.",
         loop: 4, // (25+5) * 4 = 120 mins = 2 hours
         steps: [
-          { id: "s-b-1", taskId: "bio-1", order: 1 },
-          { id: "s-b-2", taskId: "bio-2", order: 2 }
+          { id: "s-b-1", stepType: "task", taskId: "bio-1", order: 1 },
+          { id: "s-b-2", stepType: "task", taskId: "bio-2", order: 2 }
         ]
       }
     ],
@@ -90,9 +90,9 @@ export const SCENARIO_MORNING: MockScenario = {
         description: "Wake up body and mind.",
         loop: 1,
         steps: [
-          { id: "st-m-1", taskId: "m-1", order: 1 },
-          { id: "st-m-2", taskId: "m-2", order: 2 },
-          { id: "st-m-3", taskId: "m-3", order: 3 },
+          { id: "st-m-1", stepType: "task", taskId: "m-1", order: 1 },
+          { id: "st-m-2", stepType: "task", taskId: "m-2", order: 2 },
+          { id: "st-m-3", stepType: "task", taskId: "m-3", order: 3 },
         ]
       }
     ],

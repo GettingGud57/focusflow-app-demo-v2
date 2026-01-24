@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
+
 export type Task = {
   id: string;
   title: string;
@@ -13,7 +14,9 @@ export type CreateTask = Omit<Task, 'id'>;
 
 export type WorkflowSteps = {
   id: string; // unique id for list item
-  taskId: string; // reference to the original task (pure reference, no snapshot)
+  stepType: 'task' | 'workflow';
+  taskId?: string; // reference to the original task (optional)
+  workflowId?: string; // reference to nested workflow (optional)
   order: number;
 };
 
@@ -73,11 +76,14 @@ interface DataContextType {
   pendingData: PendingDataPayload | null;
 
 
-  getTaskById: (taskId: string) => Task | undefined; // Helper to look up tasks
+
+  getWorkflowById: (workflowId: string) => Workflow | undefined; // ADD THIS
   addWorkflow: (workflow: Omit<Workflow, 'id'>) => void;
   updateWorkflow: (id: string, workflow: Partial<Workflow>) => void;
   deleteWorkflow: (id: string) => void;
+  flattenWorkflow: (workflowId: string) => Task[]; // ADD THIS
   // add addTask/updateTask later if needed // added
+  getTaskById: (taskId: string) => Task | undefined; // Helper to look up tasks
   addTask: (task: CreateTask) => void;
   updateTask: (id: string, task: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -120,8 +126,8 @@ const INITIAL_WORKFLOWS: Workflow[] = [
       title: "Morning Routine",
       description: "Start the day with high energy.",
       steps: [
-        { id: "s1", taskId: "3", order: 1 },
-        { id: "s2", taskId: "4", order: 2 }
+        { id: "s1", stepType: "task", taskId: "3", order: 1 },
+        { id: "s2",stepType:"task" ,taskId: "4", order: 2 }
       ],
       loop: 1
     },
@@ -131,8 +137,8 @@ const INITIAL_WORKFLOWS: Workflow[] = [
       title: "Deep Work Block",
       description: "Focus session for coding.",
       steps: [
-        { id: "s3", taskId: "5", order: 1 },
-        { id: "s4", taskId: "6", order: 2 }
+        { id: "s3",stepType:"task", taskId: "5", order: 1 },
+        { id: "s4", stepType:"task",taskId: "6", order: 2 }
       ],
       loop: 4
     }]
@@ -177,6 +183,17 @@ const loadFromStorage = <T,>(key: string, fallback: T): T => {
     return fallback;
   }
 };
+
+// Migration: Add stepType to old workflow steps that don't have it
+const migrateWorkflows = (workflows: Workflow[]): Workflow[] => {
+  return workflows.map(wf => ({
+    ...wf,
+    steps: wf.steps.map(step => ({
+      ...step,
+      stepType: step.stepType || 'task' // Default to 'task' if missing
+    }))
+  }));
+};
  
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -186,8 +203,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
   
   const [workflows, setWorkflows] = useState<Workflow[]>(() => 
-    loadFromStorage("myApp_workflows", INITIAL_WORKFLOWS)
+    migrateWorkflows(loadFromStorage("myApp_workflows", INITIAL_WORKFLOWS))
   );
+
+
   const [events, setEvents] = useState<CalendarEvent[]>(() => 
     loadFromStorage("myApp_events", INITIAL_EVENTS)
   );
@@ -204,6 +223,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Look up a task by ID - used by components to get task data from workflow steps
   const getTaskById = (taskId: string): Task | undefined => {
     return tasks.find(t => t.id === taskId);
+  };
+
+  const getWorkflowById = (workflowId: string): Workflow | undefined => {
+    return workflows.find(wf => wf.id === workflowId);
   };
 
   // --- ACTIONS ---
@@ -309,6 +332,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setActiveTimer(null);
   };
 
+  const flattenWorkflow = (workflowId: string, applyLoops: boolean = false): Task[] => {
+  const workflow = getWorkflowById(workflowId);
+  if (!workflow) return [];
+
+  const flatTasks: Task[] = [];
+  const sortedSteps = [...workflow.steps].sort((a, b) => a.order - b.order);
+
+  for (const step of sortedSteps) {
+    // Default to 'task' if stepType is missing (backwards compatibility)
+    const stepType = step.stepType || 'task';
+    
+    if (stepType === 'task' && step.taskId) {
+      const task = getTaskById(step.taskId);
+      if (task) flatTasks.push(task);
+    } else if (stepType === 'workflow' && step.workflowId) {
+      // Nested workflows DO apply their loops
+      const nestedTasks = flattenWorkflow(step.workflowId, true);
+      flatTasks.push(...nestedTasks);
+    }
+  }
+
+  // Only apply loops if requested (for nested workflows)
+  if (applyLoops && workflow.loop && workflow.loop > 1) {
+    const originalTasks = [...flatTasks];
+    for (let i = 1; i < workflow.loop; i++) {
+      flatTasks.push(...originalTasks);
+    }
+  }
+
+  return flatTasks;
+};
+
+
+
+
 
   useEffect(() => {
     localStorage.setItem("myApp_tasks", JSON.stringify(tasks));
@@ -340,6 +398,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       pendingData,
       activeTimer,
       getTaskById,
+      getWorkflowById,
       addWorkflow, 
       updateWorkflow, 
       deleteWorkflow ,
@@ -355,7 +414,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       confirmChanges,
       discardChanges,
       startTimer,
-      stopTimer
+      stopTimer,
+      flattenWorkflow
 
 
     }}>

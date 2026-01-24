@@ -46,8 +46,8 @@ type TaskFormValues = z.infer<typeof formSchema>;
 export function TaskForm({ existingTask, trigger, open: controlledOpen, onOpenChange }: Props) {
 
 
-    const {toast} = useToast();
-    const [internalOpen, setInternalOpen] = useState(false);
+  const {toast} = useToast();
+  const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = controlledOpen ?? internalOpen;
   const setIsOpen = onOpenChange ?? setInternalOpen;
   const { addTask, updateTask } = useData();
@@ -91,6 +91,15 @@ export function TaskForm({ existingTask, trigger, open: controlledOpen, onOpenCh
     // Close modal
     setIsOpen(false);
   };
+
+  const onError = (errors: any) => {
+  if (errors.duration) {
+    toast({ 
+      title: errors.duration.message || "Invalid duration", 
+      variant: "destructive" 
+    });
+  }
+};
   
 
   return (
@@ -122,6 +131,7 @@ export function TaskForm({ existingTask, trigger, open: controlledOpen, onOpenCh
               placeholder="e.g. Draft Project Proposal"
               className="bg-muted/30 border-muted-foreground/20 focus:border-primary focus:ring-primary/10 rounded-xl"
             />
+
             {form.formState.errors.title && (
               <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
             )}
@@ -136,6 +146,10 @@ export function TaskForm({ existingTask, trigger, open: controlledOpen, onOpenCh
                 type="number"
                 className="bg-muted/30 border-muted-foreground/20 rounded-xl"
               />
+              {form.formState.errors.duration && (
+                <p className="text-sm text-destructive">{form.formState.errors.duration.message}</p>
+      
+            )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="color" className="text-muted-foreground font-medium">Color</Label>

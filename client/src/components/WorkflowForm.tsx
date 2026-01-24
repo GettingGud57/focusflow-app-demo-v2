@@ -5,25 +5,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableTaskItem from '@/components/SortableTaskItem';
 import { Task, useData, Workflow } from "@/components/data/context/DataContext";
+import { dagValidation } from "@/lib/dagValidation";
 
 
 
 function WorkflowForm({ open, onOpenChange, existingData }: { open?: boolean, onOpenChange?: (open: boolean) => void, existingData?: Workflow }) {
- const { tasks, addWorkflow, updateWorkflow } = useData();
+  const { tasks, workflows, addWorkflow, updateWorkflow, getTaskById } = useData();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loops, setLoops] = useState(1);
-  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]); // Use random IDs for sortable items
+  const [selectionMode, setSelectionMode] = useState<'task' | 'workflow'>('task');
+ 
   
   // Map sortable IDs back to actual task IDs for submission
-  // Simple approach: Store { id: 'random-uuid', task: Task } in state
-  const [workflowItems, setWorkflowItems] = useState<{id: string, task: Task}[]>([]);
+  // Each item now includes a `stepType` so we can support tasks or nested workflows later
+  const [workflowItems, setWorkflowItems] = useState<{ 
+    id: string; 
+    stepType: 'task' | 'workflow'; 
+    task?: Task;
+    workflow?: Workflow;
+  }[]>([]);
 
 
 
@@ -42,11 +50,21 @@ useEffect(() => {
       // Transform the saved steps back into the draggable format
       // Look up the actual task by taskId (pure reference)
       const restoredItems = existingData.steps.map((step: any) => {
-        const task = tasks?.find(t => t.id === step.taskId);
-        return {
-          id: crypto.randomUUID(), 
-          task: task || { id: step.taskId, title: "Task not found", duration: 0, color: "#999" }
-        };
+        if (step.stepType === 'workflow' && step.workflowId) {
+          const workflow = workflows?.find(w => w.id === step.workflowId);
+          return {
+            id: crypto.randomUUID(),
+            stepType: 'workflow' as const,
+            workflow: workflow || { id: step.workflowId, title: "Workflow not found", steps: [] }
+          };
+        } else {
+          const task = tasks?.find(t => t.id === step.taskId);
+          return {
+            id: crypto.randomUUID(),
+            stepType: 'task' as const,
+            task: task || { id: step.taskId, title: "Task not found", duration: 0, color: "#999" }
+          };
+        }
       });
       setWorkflowItems(restoredItems);
 
@@ -66,7 +84,53 @@ useEffect(() => {
     if (!task) return;
     
     // Create unique ID for this instance in the list (allows duplicates)
-    setWorkflowItems(prev => [...prev, { id: crypto.randomUUID(), task }]);
+    setWorkflowItems(prev => [...prev, { id: crypto.randomUUID(), stepType: 'task', task }]);
+  };
+
+  const handleAddWorkflow = (workflowId: string) => {
+    const workflow = workflows?.find(w => w.id.toString() === workflowId);
+    if (!workflow) return;
+    
+    // Prevent adding the workflow to itself
+    if (existingData && workflow.id === existingData.id) {
+      toast({ title: "Cannot add workflow to itself", variant: "destructive" });
+      return;
+    }
+
+    // Create a temporary workflow with the new item to check for cycles
+    const tempWorkflow: Workflow = {
+      id: existingData?.id || 'temp',
+      title: title || 'temp',
+      steps: [
+        ...workflowItems.map((item, index) => ({
+          id: item.id,
+          stepType: item.stepType as 'task' | 'workflow',
+          taskId: item.stepType === 'task' ? item.task?.id : undefined,
+          workflowId: item.stepType === 'workflow' ? item.workflow?.id : undefined,
+          order: index + 1
+        })),
+        // The new workflow 
+        {
+          id: crypto.randomUUID(),
+          stepType: 'workflow' as const,
+          workflowId: workflow.id,
+          order: workflowItems.length + 1
+        }
+      ]
+    };
+
+    // Update workflows list with temp workflow for validation
+    const updatedWorkflows = existingData 
+      ? workflows.map(w => w.id === existingData.id ? tempWorkflow : w)
+      : [...workflows, tempWorkflow];
+
+    const validation = dagValidation(tempWorkflow, updatedWorkflows);
+    if (!validation.isValid) {
+      toast({ title: validation.errors[0], variant: "destructive" });
+      return;
+    }
+
+    setWorkflowItems(prev => [...prev, { id: crypto.randomUUID(), stepType: 'workflow', workflow }]);
   };
 
   const handleRemoveTask = (itemId: string) => {
@@ -95,6 +159,8 @@ useEffect(() => {
     if (!title) return toast({ title: "Title required", variant: "destructive" });
     if (workflowItems.length === 0) return toast({ title: "Add at least one task", variant: "destructive" });
 
+    
+
     //  format the data accroding to DataContext structure
     const payload = {
       title,
@@ -102,7 +168,9 @@ useEffect(() => {
       loop: loops||1, // Use the state value for loops
       steps: workflowItems.map((item, index) => ({
         id: item.id,          // Keep the ID used for sorting
-        taskId: item.task.id, // Link to original task (pure reference, no snapshot)
+        stepType: item.stepType,
+        taskId: item.stepType === 'task' ? item.task?.id : undefined,
+        workflowId: item.stepType === 'workflow' ? item.workflow?.id : undefined,
         order: index + 1      // 1-based order
       }))
     };
@@ -128,7 +196,6 @@ useEffect(() => {
       setDescription("");
       setWorkflowItems([]);
     }
-
 
 
   };
@@ -169,22 +236,53 @@ useEffect(() => {
             </div>
             
             <div className="space-y-2">
-              <Label>Available Tasks</Label>
-              <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2">
-                {tasks?.map(task => (
-                  <div key={task.id} className="flex items-center justify-between p-3 border rounded-xl hover:bg-muted/20 transition-colors">
-                    <span className="text-sm truncate font-medium">{task.title}</span>
-                    <Button 
-                      type="button" 
-                      size="sm" 
-                      variant="secondary"
-                      onClick={() => handleAddTask(task.id.toString())}
-                    >
-                      Add
-                    </Button>
+              <Label>Add to Sequence</Label>
+              <Tabs value={selectionMode} onValueChange={(v) => setSelectionMode(v as 'task' | 'workflow')} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="task">Tasks</TabsTrigger>
+                  <TabsTrigger value="workflow">Workflows</TabsTrigger>
+                </TabsList>
+                <TabsContent value="task" className="mt-4">
+                  <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2">
+                    {tasks?.map(task => (
+                      <div key={task.id} className="flex items-center justify-between p-3 border rounded-xl hover:bg-muted/20 transition-colors">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: task.color }} />
+                          <span className="text-sm truncate font-medium">{task.title}</span>
+                        </div>
+                        <Button 
+                          type="button" 
+                          size="sm" 
+                          variant="secondary"
+                          onClick={() => handleAddTask(task.id.toString())}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </TabsContent>
+                <TabsContent value="workflow" className="mt-4">
+                  <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2">
+                    {workflows?.filter(w => !existingData || w.id !== existingData.id).map(workflow => (
+                      <div key={workflow.id} className="flex items-center justify-between p-3 border rounded-xl hover:bg-muted/20 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm truncate font-medium">{workflow.title}</span>
+                          <p className="text-xs text-muted-foreground">{workflow.steps.length} steps</p>
+                        </div>
+                        <Button 
+                          type="button" 
+                          size="sm" 
+                          variant="secondary"
+                          onClick={() => handleAddWorkflow(workflow.id.toString())}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
 
@@ -206,7 +304,7 @@ useEffect(() => {
                       <SortableTaskItem 
                         key={item.id} 
                         id={item.id} 
-                        task={item.task} 
+                        item={item}
                         onRemove={() => handleRemoveTask(item.id)} 
                       />
                     ))}
@@ -246,7 +344,19 @@ useEffect(() => {
 
                <div className="flex justify-between text-sm font-medium">
                  <span>Total Duration:</span>
-                 <span>{workflowItems.reduce((acc, curr) => acc + curr.task.duration, 0) * loops} mins</span>
+                 <span>{workflowItems.reduce((acc, curr) => {
+                   if (curr.stepType === 'task' && curr.task) {
+                     return acc + curr.task.duration;
+                   } else if (curr.stepType === 'workflow' && curr.workflow) {
+                     // Calculate workflow duration by summing all its task durations
+                     const wfDuration = curr.workflow.steps.reduce((sum, step) => {
+                       const task = getTaskById(step.taskId || '');
+                       return sum + (task?.duration || 0);
+                     }, 0);
+                     return acc + wfDuration * (curr.workflow.loop || 1);
+                   }
+                   return acc;
+                 }, 0) * loops} mins</span>
                </div>
                <Button type="submit" className="w-full font-bold">
                  {existingData ? "Save Changes" : "Create Workflow"}

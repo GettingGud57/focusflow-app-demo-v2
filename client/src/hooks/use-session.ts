@@ -17,6 +17,9 @@ type SessionState = {
 
 const STORAGE_KEY = "myApp_session";
 
+
+
+
 const loadSession = (): SessionState | null => {
   if (typeof window === "undefined") return null;
   try {
@@ -34,7 +37,8 @@ const saveSession = (state: SessionState) => {
 
 export function useSession(tasks: any[], workflows: any[]) {
   const { toast } = useToast();
-  const { activeTimer, stopTimer, getTaskById } = useData();
+  const { activeTimer, stopTimer, getTaskById, flattenWorkflow } = useData();
+  
   
   // ============================================================
   // RESTORE SESSION: Load from localStorage on mount
@@ -56,13 +60,34 @@ export function useSession(tasks: any[], workflows: any[]) {
     return workflows?.find(w => w.id === selectedId);
   }, [mode, selectedId, tasks, workflows]);
 
+
+
+  // FLATTEN workflow into sequential tasks (handles nested workflows!)
+  const flattenedTasks = useMemo(() => {
+    if (mode === "workflow" && activeItem) {
+      return flattenWorkflow(activeItem.id);
+    }
+    return [];
+  }, [mode, activeItem, flattenWorkflow]);
+
+
   const currentTask = useMemo(() => {
     if (!activeItem) return null;
     if (mode === "single") return activeItem;
     // For workflow: look up task by taskId (pure reference)
-    const step = activeItem.steps[currentStepIndex];
-    return step ? getTaskById(step.taskId) : null;
-  }, [mode, activeItem, currentStepIndex, getTaskById]);
+    return flattenedTasks[currentStepIndex] || null;
+  }, [mode, activeItem, currentStepIndex, flattenedTasks]);
+
+
+  const totalSteps = useMemo(() => {
+    if (mode === "workflow" && activeItem) {
+      // Get flattened tasks but only for 1 loop (we handle loops ourselves)
+      return flattenedTasks.length;
+    }
+    return 0;
+  }, [mode, activeItem, flattenedTasks]);
+
+
 
   // ============================================================
   // PERSIST SESSION: Save to localStorage whenever state changes
@@ -95,12 +120,11 @@ export function useSession(tasks: any[], workflows: any[]) {
       
       // Check if it's part of a workflow
       for (const workflow of workflows || []) {
-        const stepIndex = workflow.steps?.findIndex((s: any) => s.task?.id === runningTaskId);
+        const flattened = flattenWorkflow(workflow.id);
+        const stepIndex = flattened.findIndex((t: any) => t.id === runningTaskId);
         if (stepIndex !== -1) {
           setMode("workflow");
           setSelectedId(workflow.id);
-          // Note: currentStepIndex and loopIndex should already be restored from localStorage
-          // Only set stepIndex if it wasn't restored
           if (currentStepIndex === 0 && savedSession?.currentStepIndex !== stepIndex) {
             setCurrentStepIndex(stepIndex);
           }
@@ -142,25 +166,26 @@ export function useSession(tasks: any[], workflows: any[]) {
       return;
     } 
 
-    const workflow = activeItem;
-    // CRITICAL FIX: Use our editable 'targetLoops', not the read-only 'workflow.loop'
-    if (workflow && currentStepIndex < workflow.steps.length - 1) {
-      stopTimer(); // Stop timer before moving to next step
+
+    if (currentStepIndex < flattenedTasks.length - 1) {
+      stopTimer();
       setCurrentStepIndex(prev => prev + 1); 
     } else {
         // Check against our LOCAL target
         if (currentLoopIndex < targetLoops - 1) {
-            stopTimer(); // Stop timer before starting new loop
+            stopTimer();
             setCurrentLoopIndex(prev => prev + 1);
             setCurrentStepIndex(0);
             toast({ title: "Cycle Complete", description: `Starting cycle ${currentLoopIndex + 2} of ${targetLoops}` });
         } else {
             toast({ title: "Workflow Finished!", description: "You are a machine." });
-            stopTimer(); // Stop timer when workflow completes
+            stopTimer();
             setSelectedId("");
         }
     }
   };
+
+
 
   // 5. The Adjustment Logic (For your +/- buttons)
   const adjustLoops = (delta: number) => {
@@ -195,9 +220,11 @@ export function useSession(tasks: any[], workflows: any[]) {
       currentStepIndex, 
       activeItem, 
       currentTask,
-      // 👇 We add these so Dashboard can read them
       currentLoopIndex,
-      targetLoops 
+      targetLoops,
+      flattenedTasks,  // Expose for SessionSidebar
+      totalSteps,      // Expose total flattened steps count
+
     },
     actions: { 
       setMode, 

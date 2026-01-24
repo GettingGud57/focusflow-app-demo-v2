@@ -18,7 +18,7 @@ interface WorkflowCardProps {
 export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
   // 1. BRING THE HOOKS INSIDE
   const { toast } = useToast();
-  const { deleteWorkflow, getTaskById } = useData();
+  const { deleteWorkflow, getTaskById, workflows } = useData();
 
   return (
     // no need  'key={wf.id}' (it belongs in workflowpage)
@@ -85,15 +85,26 @@ export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview Sequence</div>
         <div className="flex items-center gap-2 overflow-hidden">
           {wf.steps.slice(0, 3).map((step: any, i: number) => {
-            const task = getTaskById(step.taskId);
-            const taskTitle = task?.title || "Task not found";
+            let displayTitle = "";
+            let displayIcon = null;
+            
+            if (step.stepType === 'workflow' && step.workflowId) {
+              const nestedWorkflow = workflows?.find(w => w.id === step.workflowId);
+              displayTitle = nestedWorkflow?.title || "Workflow not found";
+              displayIcon = <Layers className="w-3 h-3 inline mr-1" />;
+            } else if (step.taskId) {
+              const task = getTaskById(step.taskId);
+              displayTitle = task?.title || "Task not found";
+            }
+            
             return (
             <div key={step.id} className="flex items-center gap-2 min-w-0">
               <div 
-                className="px-2 py-1 rounded-md bg-muted text-xs whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]"
-                title={taskTitle}
+                className="px-2 py-1 rounded-md bg-muted text-xs whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px] flex items-center"
+                title={displayTitle}
               >
-                {taskTitle}
+                {displayIcon}
+                {displayTitle}
               </div>
               {i < Math.min(wf.steps.length, 3) - 1 && <ArrowRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
             </div>
