@@ -48,7 +48,7 @@ useEffect(() => {
       setDescription(existingData.description || "");
       
       // Transform the saved steps back into the draggable format
-      // Look up the actual task by taskId (pure reference)
+      // Look up the actual task/workflow by taskId/workflowId (pure reference)
       const restoredItems = existingData.steps.map((step: any) => {
         if (step.stepType === 'workflow' && step.workflowId) {
           const workflow = workflows?.find(w => w.id === step.workflowId);

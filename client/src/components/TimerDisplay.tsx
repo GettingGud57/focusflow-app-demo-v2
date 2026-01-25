@@ -33,6 +33,8 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   // This fixes the "inaccurate time after navigation" bug.
   // Instead of defaulting to full duration and relying on useEffect to fix it,
   // we calculate the correct initial values immediately.
+
+
   
   const getInitialTimeLeft = () => {
     if (activeTimer?.taskId === taskId) {

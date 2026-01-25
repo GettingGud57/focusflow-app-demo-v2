@@ -15,8 +15,8 @@ export type CreateTask = Omit<Task, 'id'>;
 export type WorkflowSteps = {
   id: string; // unique id for list item
   stepType: 'task' | 'workflow';
-  taskId?: string; // reference to the original task (optional)
-  workflowId?: string; // reference to nested workflow (optional)
+  taskId?: string; // reference to the task (when stepType is 'task')
+  workflowId?: string; // reference to nested workflow (when stepType is 'workflow')
   order: number;
 };
 
@@ -307,13 +307,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const confirmChanges = () => {
     if (!pendingData) return;
     
-    // Commit to real database
-    if (pendingData.tasks.length > 0) setTasks(prev => [...prev, ...pendingData.tasks]);
-    if (pendingData.workflows.length > 0) setWorkflows(prev => [...prev, ...pendingData.workflows]);
-    if (pendingData.events.length > 0) setEvents(prev => [...prev, ...pendingData.events]);
-
-    // Clear ghost data
-    setPendingData(null);
+    // Commit to real database - tasks MUST be added first before workflows
+    // to ensure workflow steps can find their task references
+    if (pendingData.tasks.length > 0) {
+      setTasks(prev => [...prev, ...pendingData.tasks]);
+    }
+    
+    // Use setTimeout to ensure tasks are committed before workflows
+    setTimeout(() => {
+      if (pendingData.workflows.length > 0) {
+        setWorkflows(prev => [...prev, ...pendingData.workflows]);
+      }
+      if (pendingData.events.length > 0) {
+        setEvents(prev => [...prev, ...pendingData.events]);
+      }
+      
+      // Clear ghost data after all updates
+      setPendingData(null);
+    }, 0);
   };
 
   const discardChanges = () => {

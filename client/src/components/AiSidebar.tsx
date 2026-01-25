@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils"; // Assuming you have shadcn utils
+import getRandomColor from "@/lib/randomColor";
 
 import { useData } from "@/components/data/context/DataContext"; 
 import {MOCK_SCENARIOS } from "@/components/data/Mockdata";
+import { generateProductivityPlan } from "../lib/ai";
 import { useEffect, useRef, useState } from "react";
+import { get } from "http";
 
 
 
@@ -40,8 +43,8 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
 
 
 
-
-const handleSend = () => {
+{/* HANDLE SEND (MOCK DATA VERSION) --- IGNORE THIS FUNCTION ---*/}
+const handleSd = () => {
     if (!input.trim()) return;
 
     // 1. Save User's Message immediately
@@ -77,6 +80,114 @@ const handleSend = () => {
 
       setIsTyping(false); // Hide "typing..." bubble
     }, 1500); 
+  };
+
+
+
+
+  const handleAiSend = async () => {
+    // 1. Basic Validation
+    if (!input.trim()) return;
+
+    // 2. Setup the UI (Show user message, clear input, show typing bubble)
+    const userText = input;
+    addMessage("user", userText);
+    setInput("");      
+    setIsTyping(true); 
+
+    try {
+      // 3. Prepare Context
+      // The AI needs to know today's date so it doesn't schedule tasks in the past.
+      // We also pass empty arrays for now since we are just starting.
+      const context = {
+        existingTasks: [], 
+        existingWorkflows: [],
+        currentDate: new Date()
+      };
+
+      // 4. Create the buckets for all new items
+
+      let allNewTasks: any[] = [];
+      let allNewWorkflows: any[] = [];
+
+
+      const response = await generateProductivityPlan(userText);
+
+      // 5. Check if the AI actually returned any work
+      const hasNewData = 
+        (response.data.newTasks && response.data.newTasks.length > 0) ||
+        (response.data.newWorkflows && response.data.newWorkflows.length > 0) ||
+        (response.data.newEvents && response.data.newEvents.length > 0);
+
+      // 6. If has tasks ,create clean versions with IDs and colors
+
+      if (response.data.newTasks && response.data.newTasks.length > 0) {
+        const standaloneTasks = response.data.newTasks.map((t: any) => ({
+          ...t,
+          id: crypto.randomUUID(),
+          status: 'todo',
+          color: t.color || getRandomColor(),
+        }));
+        allNewTasks = [...allNewTasks, ...standaloneTasks];
+      }
+    
+     // 7. If has workflows, process them
+
+      if (response.data.newWorkflows && response.data.newWorkflows.length > 0) {
+        response.data.newWorkflows.forEach((wf: any) => {
+          const workflowId = crypto.randomUUID();
+          const workflowSteps: any[] = [];
+         // Process each task in the workflow
+          wf.tasks.forEach((t: any, index: number) => {
+
+            const newTaskId = crypto.randomUUID();
+            const realTask = {
+              ...t, // title, duration, etc.
+              id: newTaskId,
+              status: 'todo',
+              color: t.color || getRandomColor(),
+            };
+            allNewTasks.push(realTask); // Add to overall task list
+
+            const step = {
+              id: crypto.randomUUID(),
+              stepType: 'task' as const,
+              taskId: newTaskId,    // only taskId is needed here
+              order: index,
+            };
+
+            workflowSteps.push(step);
+          });
+          const realWorkflow = {
+            ...wf,
+            id: workflowId,
+            loop: wf.loop || 1,
+            steps: workflowSteps // Now contains valid step references
+          };
+
+        allNewWorkflows.push(realWorkflow);
+
+        })
+      }
+      // 8. If anything new, propose changes to user
+      if (hasNewData) {
+        proposeChanges({
+          tasks: allNewTasks,
+          workflows: allNewWorkflows,
+          events: (response.data.newEvents || []).map((event: any) => ({ ...event, id: crypto.randomUUID() }))
+        });
+      }
+
+      // 7. Display the AI's chat message
+      addMessage("ai", response.aiResponse);
+
+    } catch (error) {
+      console.error("AI Error:", error);
+      addMessage("ai", "I'm having trouble connecting to the server. Please check your internet or API key.");
+    } finally {
+      // 8. Always turn off the typing bubble, even if it failed
+      setIsTyping(false); 
+    }
   };
 
 
@@ -174,9 +285,9 @@ const handleSend = () => {
             className="h-9 text-sm"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && handleAiSend()}
           />
-          <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend}>
+          <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleAiSend}>
             <Send className="w-4 h-4" />
           </Button>
         </div>
