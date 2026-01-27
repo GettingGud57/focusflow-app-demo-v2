@@ -9,6 +9,14 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true // REQUIRED since we are running in Vite (Client side)
 });
 
+
+type AiContext = {
+  existingTasks: any[];    // What tasks exist already?
+  existingWorkflows: any[]; // What workflows exist?
+  currentDate: Date;       // What time is it?
+  chatHistory?: { role: 'user' | 'ai', text: string }[]; // Previous conversation
+};
+
 // 2. Define the Tools (The "Agent" capabilities)
 const tools = [
   {
@@ -70,14 +78,35 @@ const tools = [
   }
 ];
 
-export async function generateProductivityPlan(userMessage: string) {
+export async function generateProductivityPlan(userMessage: string, context?: AiContext) {
   try {
+    // Build context-aware system message
+    let systemMessage = "You are a helpful productivity assistant. When creating tasks or workflows, ALWAYS provide clear, helpful descriptions that explain what needs to be done and why it's important. Use the generate_productivity_plan tool for planning requests.";
+    
+    if (context) {
+      systemMessage += `\n\nCurrent context:\n- Date: ${context.currentDate.toLocaleDateString()}\n- Existing tasks (${context.existingTasks.length}): ${context.existingTasks.map(t => t.title).join(", ") || "none"}\n- Existing workflows (${context.existingWorkflows.length}): ${context.existingWorkflows.map(w => w.title).join(", ") || "none"}\n\nAvoid creating duplicates unless explicitly requested. Reference previous conversation when relevant.`;
+    }
+
+    // Build message history: system + chat history + current user message
+    const messages: any[] = [
+      { role: 'system', content: systemMessage }
+    ];
+
+    // Add previous chat messages (convert 'ai' role to 'assistant')
+    if (context?.chatHistory && context.chatHistory.length > 0) {
+      const historyMessages = context.chatHistory.slice(-10).map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.text
+      }));
+      messages.push(...historyMessages);
+    }
+
+    // Add current user message
+    messages.push({ role: 'user', content: userMessage });
+
     const response = await openai.chat.completions.create({
-      model: 'openai/gpt-oss-120b', // A fast, smart model on Groq
-      messages: [
-        { role: 'system', content: "You are a helpful productivity assistant. When creating tasks or workflows, ALWAYS provide clear, helpful descriptions that explain what needs to be done and why it's important. Use the generate_productivity_plan tool for planning requests." },
-        { role: 'user', content: userMessage },
-      ],
+      model: 'openai/gpt-oss-120b',
+      messages: messages,
       tools: tools,
       tool_choice: "auto",
     });

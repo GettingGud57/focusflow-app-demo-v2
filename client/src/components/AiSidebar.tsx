@@ -24,7 +24,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
 const [input, setInput] = useState("");
 const [isTyping, setIsTyping] = useState(false);
 const scrollRef = useRef<HTMLDivElement>(null);
-const { messages, addMessage,addTask,addEvent,addWorkflow ,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
+const {tasks, workflows, messages, addMessage,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
 
 
 
@@ -96,13 +96,12 @@ const handleSd = () => {
     setIsTyping(true); 
 
     try {
-      // 3. Prepare Context
-      // The AI needs to know today's date so it doesn't schedule tasks in the past.
-      // We also pass empty arrays for now since we are just starting.
+      // 3. Prepare Context - Give AI full awareness
       const context = {
-        existingTasks: [], 
-        existingWorkflows: [],
-        currentDate: new Date()
+        existingTasks:tasks , 
+        existingWorkflows: workflows,
+        currentDate: new Date(),
+        chatHistory: messages // Pass conversation history
       };
 
       // 4. Create the buckets for all new items
@@ -111,7 +110,7 @@ const handleSd = () => {
       let allNewWorkflows: any[] = [];
 
 
-      const response = await generateProductivityPlan(userText);
+      const response = await generateProductivityPlan(userText, context);
 
       // 5. Check if the AI actually returned any work
       const hasNewData = 

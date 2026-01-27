@@ -1,30 +1,4 @@
 
-
-
-// Simple check: would adding workflowToAdd to currentWorkflow create a cycle?
-// Just checks if workflowToAdd eventually references currentWorkflowId
-export function wouldCreateCycle(currentWorkflowId: string, workflowToAddId: string, workflows: Workflow[]): boolean {
-  const graph = buildGraph(workflows);
-  
-  // Check if workflowToAdd can reach currentWorkflow
-  return canReach(workflowToAddId, currentWorkflowId, graph, {});
-}
-
-function canReach(from: string, target: string, graph: { [key: string]: string[] }, visited: { [key: string]: boolean }): boolean {
-  if (from === target) return true;
-  if (visited[from]) return false;
-  if (!graph[from]) return false;
-  
-  visited[from] = true;
-  
-  for (const child of graph[from]) {
-    if (canReach(child, target, graph, visited)) {
-      return true;
-    }
-  }
-  
-  return false;
-}
 import { Workflow } from "@/components/data/context/DataContext";
 
 export  function dagValidation(wf: Workflow,wfs:Workflow[]): { isValid: boolean; errors: string[] } {
@@ -49,6 +23,7 @@ function hasCycle({workflowId, graph, visited, recursionStack}: {workflowId: str
 
   recursionStack[workflowId] = true; 
   
+  if (visited[workflowId]) return false;
 
   for (let childId of graph[workflowId]) {
     if (recursionStack[childId]) {

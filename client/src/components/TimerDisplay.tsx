@@ -133,6 +133,13 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   // 
   // CLEANUP: Returns a function that clears interval when effect re-runs
   //          or component unmounts (prevents memory leaks)
+  const hasCompletedRef = useRef(false);
+
+  // Reset completion flag only when TASK changes (not on every effect run)
+  useEffect(() => {
+    hasCompletedRef.current = false;
+  }, [taskId]);
+
   useEffect(() => {
     if (state === "running" && isGloballyRunning && activeTimer) {
       // Use global timer for accurate time tracking
@@ -153,9 +160,12 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
       intervalRef.current = setInterval(() => {
         setBufferTime((prev) => {
           if (prev <= 1) {
-            setState("completed");
-            stopTimer(); // Stop global timer
-            onComplete();
+            if(!hasCompletedRef.current){
+              hasCompletedRef.current = true; // Prevent double-calling
+              setState("completed");
+              stopTimer(); // Stop global timer
+              onComplete();
+            }
             return 0;
           }
           return prev - 1;
