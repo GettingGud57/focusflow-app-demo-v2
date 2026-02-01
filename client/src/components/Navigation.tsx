@@ -19,7 +19,7 @@ export function Navigation() {
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
             <Play className="w-4 h-4 fill-current" />
           </div>
-          <span className="font-display font-bold text-xl tracking-tight">Flowmodoro</span>
+          <span className="font-display font-bold text-xl tracking-tight">FocusFlow</span>
         </div>
 
         {links.map((link) => {

@@ -93,6 +93,7 @@ interface DataContextType {
   deleteEvent: (id: string) => void;
   toggleEventCompletion: (id: string) => void;
   addMessage: (role: 'user' | 'ai', text: string) => void;
+  clearMessages: () => void;
   startTimer: (taskId: string, duration: number) => void;
   stopTimer: () => void;
   // [CLEANER] And here
@@ -162,7 +163,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     { 
       id: "welcome", 
       role: "ai", 
-      text: "Hello! I'm your productivity architect. Try asking for a 'morning routine' or 'biology study'.", 
+      text: "Hi there! 👋 How can I help you stay productive today? Whether you need a new task list, a workflow plan, or help organizing your existing items, just let me know!", 
       timestamp: new Date() 
     }
   ];
@@ -296,6 +297,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setMessages(prev => [...prev, { id, role, text, timestamp: new Date() }]);
   };
 
+
+  const clearMessages = () => {
+    setMessages([]);
+  }
+
   const proposeChanges = (data: { tasks?: Task[], workflows?: Workflow[], events?: CalendarEvent[] }) => {
     setPendingData({
       tasks: data.tasks || [],
@@ -421,6 +427,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       deleteEvent, 
       toggleEventCompletion,
       addMessage,
+      clearMessages,
       proposeChanges,
       confirmChanges,
       discardChanges,

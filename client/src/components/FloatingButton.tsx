@@ -25,7 +25,7 @@ export function FloatingButton( { onClick }: FloatingButtonProps) {
     <div className="fixed bottom-8 right-8 z-50">
       <Button 
         size="icon"
-        className="h-14 w-14 rounded-full shadow-xl bg-indigo-600 hover:bg-indigo-700 hover:scale-105 transition-all"
+        className="h-14 w-14 rounded-full shadow-xl bg-primary hover:bg-primary hover:scale-105 transition-all" //bg indigo-700
         onClick={onClick}
       >
         <Sparkles className="w-6 h-6 text-white" />

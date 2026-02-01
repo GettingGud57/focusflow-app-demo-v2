@@ -1,4 +1,4 @@
-import { Send, X,Check } from "lucide-react";
+import { Send, X,Check,Plus} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
@@ -24,7 +24,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
 const [input, setInput] = useState("");
 const [isTyping, setIsTyping] = useState(false);
 const scrollRef = useRef<HTMLDivElement>(null);
-const {tasks, workflows, messages, addMessage,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
+const {tasks, workflows, messages, addMessage,clearMessages,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
 
 
 
@@ -202,6 +202,9 @@ const handleSd = () => {
       {/* HEADER */}
       <div className="p-4 border-b flex items-center justify-between">
         <h2 className="font-semibold text-sm">AI Assistant</h2>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => clearMessages()}>
+          <Plus className="w-4 h-4" />
+        </Button>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
           <X className="w-4 h-4" />
         </Button>
