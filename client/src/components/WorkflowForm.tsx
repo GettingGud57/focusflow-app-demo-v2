@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Minus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableTaskItem from '@/components/SortableTaskItem';
 import { Task, useData, Workflow } from "@/components/data/context/DataContext";
 import { dagValidation } from "@/lib/dagValidation";
+import { DependencyTree } from "@/components/DependencyTree";
 
 
 
@@ -22,6 +23,10 @@ function WorkflowForm({ open, onOpenChange, existingData }: { open?: boolean, on
   const [description, setDescription] = useState("");
   const [loops, setLoops] = useState(1);
   const [selectionMode, setSelectionMode] = useState<'task' | 'workflow'>('task');
+
+
+
+  const [cyclePath, setCyclePath] = useState<string[] | null>(null);
  
   
   // Map sortable IDs back to actual task IDs for submission
@@ -124,11 +129,22 @@ useEffect(() => {
       ? workflows.map(w => w.id === existingData.id ? tempWorkflow : w)
       : [...workflows, tempWorkflow];
 
-    const validation = dagValidation(tempWorkflow, updatedWorkflows);
-    if (!validation.isValid) {
-      toast({ title: validation.errors[0], variant: "destructive" });
-      return;
-    }
+      const validation = dagValidation(tempWorkflow, updatedWorkflows);
+      if (!validation.isValid) {
+  // Store the cycle path in state to show the tree
+        setCyclePath(validation.cyclePath || null);
+        toast({ title: validation.errors[0], variant: "destructive" });
+        return;
+      }
+
+
+      
+
+
+      
+
+
+
 
     setWorkflowItems(prev => [...prev, { id: crypto.randomUUID(), stepType: 'workflow', workflow }]);
   };
@@ -291,6 +307,35 @@ useEffect(() => {
               <Label className="text-primary font-bold">Workflow Sequence</Label>
               <span className="text-xs text-muted-foreground">{workflowItems.length} steps</span>
             </div>
+
+
+
+              {cyclePath && cyclePath.length > 0 && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl">
+                <DependencyTree 
+                  cyclePath={cyclePath}
+                  allWorkflows={workflows}
+                />
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  size="sm"
+                  className="mt-2 text-xs text-red-600"
+                  onClick={() => setCyclePath(null)}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            )}
+            
+
+
+
+
+
+
+
+
             
             {workflowItems.length === 0 ? (
               <div className="h-full flex items-center justify-center text-sm text-muted-foreground italic border-2 border-dashed border-muted-foreground/20 rounded-xl min-h-[150px]">
