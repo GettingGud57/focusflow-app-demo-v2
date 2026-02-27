@@ -23,7 +23,7 @@ export function DependencyTree({
         Circular Dependency Detected
       </div>
       <div className="flex items-center gap-1 flex-wrap text-xs">
-        {cycleNames.map((name, i) => (
+        {cycleNames.map((name, i) => (                              // Display the cycle path with arrows
           <span key={i} className="flex items-center gap-1">
             <span className="bg-red-100 dark:bg-red-900/50 px-2 py-1 rounded font-medium">
               {name}

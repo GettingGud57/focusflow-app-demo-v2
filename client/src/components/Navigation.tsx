@@ -16,9 +16,7 @@ export function Navigation() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:relative md:w-64 md:flex-shrink-0 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t md:border-t-0 md:border-r border-border/50">
       <div className="flex md:flex-col h-full items-center md:items-start p-2 md:p-6 gap-2 md:gap-4 justify-around md:justify-start">
         <div className="hidden md:flex items-center gap-3 mb-8 px-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
-            <Play className="w-4 h-4 fill-current" />
-          </div>
+          <img src="/fffavicon.png" alt="FocusFlow" className="w-8 h-8 rounded-lg object-cover" />
           <span className="font-display font-bold text-xl tracking-tight">FocusFlow</span>
         </div>
 

@@ -1,15 +1,17 @@
 import { Send, X,Check,Plus} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
-import { cn } from "@/lib/utils"; // Assuming you have shadcn utils
+import { cn } from "@/lib/utils"; 
 import getRandomColor from "@/lib/randomColor";
 
 import { useData } from "@/components/data/context/DataContext"; 
-import {MOCK_SCENARIOS } from "@/components/data/Mockdata";
-import { generateProductivityPlan } from "../lib/ai";
+
+// Lazy-load `generateProductivityPlan` at call time to avoid bundling server-only
+// dependencies (like the OpenAI SDK) during HMR.
 import { useEffect, useRef, useState } from "react";
-import { get } from "http";
+
 
 
 
@@ -24,6 +26,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
 const [input, setInput] = useState("");
 const [isTyping, setIsTyping] = useState(false);
 const scrollRef = useRef<HTMLDivElement>(null);
+const textareaRef = useRef<HTMLTextAreaElement>(null);
 const {tasks, workflows, messages, addMessage,clearMessages,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
 
 
@@ -43,148 +46,176 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
 
 
 
-{/* HANDLE SEND (MOCK DATA VERSION) --- IGNORE THIS FUNCTION ---*/}
-const handleSd = () => {
-    if (!input.trim()) return;
-
-    // 1. Save User's Message immediately
-    const userText = input;
-    addMessage("user", userText);
-    setInput("");      // Clear input box
-    setIsTyping(true); // Show "typing..." bubble
-
-    // 2. Simulate AI "Thinking" Delay (1.5 seconds)
-    setTimeout(() => {
-      const cmd = userText.toLowerCase();
-      
-      // 3. Search for a matching scenario in your Mock Data
-      const scenario = MOCK_SCENARIOS.find(s => cmd.includes(s.triggerKeyword));
-
-      if (scenario) {
-        // --- MATCH FOUND! EXECUTE DATA INJECTION ---
-        proposeChanges({
-        tasks: scenario.data.newTasks || [],
-        workflows: scenario.data.newWorkflows || [],
-        events: scenario.data.newEvents || []
-        });
-
-   
-
-        // D. Reply with the specific script
-        addMessage("ai", scenario.aiResponse);
-      
-      } else {
-        // --- NO MATCH FOUND ---
-        addMessage("ai", "I'm not sure how to handle that. Try keywords like 'biology', 'morning', or 'deadline'.");
-      }
-
-      setIsTyping(false); // Hide "typing..." bubble
-    }, 1500); 
-  };
 
 
 
 
   const handleAiSend = async () => {
-    // 1. Basic Validation
+    // Basic Validation, if nothing in input, return nothing
     if (!input.trim()) return;
 
-    // 2. Setup the UI (Show user message, clear input, show typing bubble)
+    //  Setup the UI (Show user message, clear input, typing bubble)
     const userText = input;
     addMessage("user", userText);
-    setInput("");      
+    setInput("");
+
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '36px';
+    }
     setIsTyping(true); 
 
     try {
-      // 3. Prepare Context - Give AI full awareness
+      // Prepare Context to give AI full awareness
       const context = {
         existingTasks:tasks , 
         existingWorkflows: workflows,
         currentDate: new Date(),
-        chatHistory: messages // Pass conversation history
+        chatHistory: messages // Pass convo history
       };
 
-      // 4. Create the buckets for all new items
-
+      // Create the buckets for all new items
+      
       let allNewTasks: any[] = [];
       let allNewWorkflows: any[] = [];
 
-
+      const { generateProductivityPlan } = await import("@/lib/ai");
       const response = await generateProductivityPlan(userText, context);
 
-      // 5. Check if the AI actually returned any work
+      // Check if AI actually returned any work
       const hasNewData = 
         (response.data.newTasks && response.data.newTasks.length > 0) ||
         (response.data.newWorkflows && response.data.newWorkflows.length > 0) ||
         (response.data.newEvents && response.data.newEvents.length > 0);
 
-      // 6. If has tasks ,create clean versions with IDs and colors
+      // Build a task ID map from TOP-LEVEL tasks FIRST
+      // So workflows can reference them correctly
+      const taskIdMap: Record<string, string> = {};
 
       if (response.data.newTasks && response.data.newTasks.length > 0) {
-        const standaloneTasks = response.data.newTasks.map((t: any) => ({
-          ...t,
-          id: crypto.randomUUID(),
-          status: 'todo',
-          color: t.color || getRandomColor(),
-        }));
-        allNewTasks = [...allNewTasks, ...standaloneTasks];
+        response.data.newTasks.forEach((task: any) => {
+          const newTaskId = crypto.randomUUID();
+          const realTask = {
+            ...task,
+            id: newTaskId,
+            status: 'todo',
+            color: task.color || getRandomColor(),
+          };
+          // Map old AI-assigned ID -> new real UUID
+          if (task.id) taskIdMap[task.id] = newTaskId;
+          // Also map by title as fallback (AI sometimes references by title)
+          taskIdMap[task.title] = newTaskId;
+          allNewTasks.push(realTask);
+        });
       }
-    
-     // 7. If has workflows, process them
 
       if (response.data.newWorkflows && response.data.newWorkflows.length > 0) {
-        response.data.newWorkflows.forEach((wf: any) => {
-          const workflowId = crypto.randomUUID();
+        
+        // FIRST PASS: Assign real IDs to all workflows and build an ID mapping
+        const idMap: Record<string, string> = {};
+        
+        const workflowsWithRealIds = response.data.newWorkflows.map((wf: any) => {
+          const realId = crypto.randomUUID();
+          if (wf.id) idMap[wf.id] = realId;
+          return { ...wf, realId };
+        });
+
+        // SECOND PASS: Process steps, remapping any workflow/task references
+        workflowsWithRealIds.forEach((wf: any) => {
           const workflowSteps: any[] = [];
-         // Process each task in the workflow
-          wf.tasks.forEach((t: any, index: number) => {
 
-            const newTaskId = crypto.randomUUID();
-            const realTask = {
-              ...t, // title, duration, etc.
-              id: newTaskId,
-              status: 'todo',
-              color: t.color || getRandomColor(),
-            };
-            allNewTasks.push(realTask); // Add to overall task list
+          if (wf.steps && wf.steps.length > 0) {
+            wf.steps.forEach((step: any, index: number) => {
 
-            const step = {
-              id: crypto.randomUUID(),
-              stepType: 'task' as const,
-              taskId: newTaskId,    // only taskId is needed here
-              order: index,
-            };
+              if (step.stepType === 'task') {
+                if (step.task) {
+                  // Case 1: Inline task — check if already created from top-level tasks
+                  const existingTask = allNewTasks.find(t => t.title === step.task.title);
 
-            workflowSteps.push(step);
-          });
+                  if (existingTask) {
+                    // ✅ Task already exists from top-level, just reference it
+                    workflowSteps.push({
+                      id: crypto.randomUUID(),
+                      stepType: 'task' as const,
+                      taskId: existingTask.id,
+                      order: index,
+                    });
+                  } else {
+                    // 🆕 Genuinely new inline task, create it
+                    const newTaskId = crypto.randomUUID();
+                    const realTask = {
+                      ...step.task,
+                      id: newTaskId,
+                      status: 'todo',
+                      color: step.task.color || getRandomColor(),
+                    };
+                    allNewTasks.push(realTask);
+                    workflowSteps.push({
+                      id: crypto.randomUUID(),
+                      stepType: 'task' as const,
+                      taskId: newTaskId,
+                      order: index,
+                    });
+                  }
+                } else if (step.taskId) {
+                  // Case 2: Reference to a task — check taskIdMap first (top-level tasks)
+                  const resolvedTaskId = taskIdMap[step.taskId] || step.taskId;
+                  workflowSteps.push({
+                    id: crypto.randomUUID(),
+                    stepType: 'task' as const,
+                    taskId: resolvedTaskId,
+                    order: index,
+                  });
+                }
+              }else if (step.stepType === 'workflow' && step.workflowId) {
+                // Case 3: Reference workflow — REMAP the ID if it was created in this batch
+                const resolvedId = idMap[step.workflowId] || step.workflowId;
+                workflowSteps.push({
+                  id: crypto.randomUUID(),
+                  stepType: 'workflow' as const,
+                  workflowId: resolvedId,
+                  order: index,
+                });
+              }
+            });
+          }
+
           const realWorkflow = {
             ...wf,
-            id: workflowId,
+            id: wf.realId,
             loop: wf.loop || 1,
-            steps: workflowSteps // Now contains valid step references
+            steps: workflowSteps,
           };
-
-        allNewWorkflows.push(realWorkflow);
-
-        })
+          delete realWorkflow.realId;
+          allNewWorkflows.push(realWorkflow);
+        });
       }
-      // 8. If anything new, propose changes to user
+ 
+
+
+
+      // If anything new, propose changes to user
       if (hasNewData) {
         proposeChanges({
           tasks: allNewTasks,
           workflows: allNewWorkflows,
           events: (response.data.newEvents || []).map((event: any) => ({ ...event, id: crypto.randomUUID() }))
         });
+        console.log("Proposed Changes:", {
+          tasks: allNewTasks,
+          workflows: allNewWorkflows,
+          events: response.data.newEvents || []
+        });
       }
 
-      // 7. Display the AI's chat message
+      // Display the AI's chat message
       addMessage("ai", response.aiResponse);
 
     } catch (error) {
       console.error("AI Error:", error);
       addMessage("ai", "I'm having trouble connecting to the server. Please check your internet or API key.");
     } finally {
-      // 8. Always turn off the typing bubble, even if it failed
+      //  Always turn off the typing bubble, even if failed
       setIsTyping(false); 
     }
   };
@@ -212,7 +243,7 @@ const handleSd = () => {
 
 
 
-     {/* [NEW] CONFIRMATION UI BLOCK */}
+     {/* LE CONFIRMATION UI BLOCK */}
     {pendingData && (
         <div className="p-3 bg-amber-50 border-b border-amber-200 animate-in slide-in-from-top-2">
            <p className="text-xs font-medium text-amber-900 mb-2">
@@ -281,13 +312,28 @@ const handleSd = () => {
 
       {/* INPUT AREA */}
       <div className="p-4 border-t bg-background">
-        <div className="flex gap-2">
-          <Input 
-            placeholder="Ask anything..." 
-            className="h-9 text-sm"
+        <div className="flex gap-2 items-end">
+          <Textarea
+            ref={textareaRef}
+            placeholder="Ask anything..."
+            className="resize-none text-sm min-h-[36px] max-h-40 overflow-y-auto"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAiSend()}
+            onChange={e => {
+              setInput(e.target.value);
+              // Auto-resize textarea
+              if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto';
+                textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+              }
+            }}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleAiSend();
+              }
+            }}
+            rows={1}
+            style={{ height: '36px' }}
           />
           <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleAiSend}>
             <Send className="w-4 h-4" />

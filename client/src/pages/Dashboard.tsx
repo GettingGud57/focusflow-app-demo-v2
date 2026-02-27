@@ -86,10 +86,10 @@ export default function Dashboard() {
         </Tabs>
       </header>
 
-      <div className="grid lg:grid-cols-[1fr_300px] gap-8">
+      <div className="grid lg:grid-cols-[1fr_300px] gap-8 items-start">
         
         {/* Main Player Area */}
-        <Card className="glass-panel border-none p-8 flex flex-col items-center justify-center min-h-[500px] rounded-3xl relative overflow-hidden">
+        <Card className="glass-panel border-none p-8 flex flex-col items-center justify-center min-h-[500px] rounded-3xl relative overflow-hidden sticky top-8">
           {currentTask ? (
             <TimerDisplay 
               taskId={currentTask.id}

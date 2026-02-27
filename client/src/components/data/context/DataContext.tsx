@@ -111,12 +111,12 @@ interface DataContextType {
 
 
 const INITIAL_TASKS: Task[] =  [
-       { id: "1", title: "Study React", description: "Get fuked", duration: 25, color: "#3b82f6" },
-    { id: "2", title: "Fix Database", description: "Holy hell", duration: 45, color: "#ef4444" },
-  { id: "3", title: "Check Emails" ,description: "Check facebook acc", duration: 15, color: "#22c55e" },
+       { id: "1", title: "Study SQL", description: "get Cooked", duration: 25, color: "#3b82f6" },
+    { id: "2", title: "Fix Database", description: "non existent", duration: 45, color: "#ef4444" },
+  { id: "3", title: "Check Emails" ,description: "Check results for submission", duration: 15, color: "#22c55e" },
   { id: "4", title: "Standing meet up",description: "Explain why it doesnt work", duration: 20, color: "#eab308" },
-   { id: "5" , title: "Code Feature",description: "Code the agentic ai", duration: 50,color:"#E33BD2" },
-   { id: "6", title: "Rest",description: "Reflect on your life", duration: 10, color:"#6E4AD9" }
+  {id: "5", title: "Rest", description: "Take a break", duration: 5, color: "#8b5cf6" },
+
 ];
 
 
@@ -125,7 +125,7 @@ const INITIAL_WORKFLOWS: Workflow[] = [
     {
       id: "1",
       title: "Morning Routine",
-      description: "Start the day with high energy.",
+      description: "Start the day asap.",
       steps: [
         { id: "s1", stepType: "task", taskId: "3", order: 1 },
         { id: "s2",stepType:"task" ,taskId: "4", order: 2 }
@@ -138,8 +138,8 @@ const INITIAL_WORKFLOWS: Workflow[] = [
       title: "Deep Work Block",
       description: "Focus session for coding.",
       steps: [
-        { id: "s3",stepType:"task", taskId: "5", order: 1 },
-        { id: "s4", stepType:"task",taskId: "6", order: 2 }
+        { id: "s3",stepType:"task", taskId: "1", order: 1 },
+        { id: "s4", stepType:"task",taskId: "5", order: 2 }
       ],
       loop: 4
     }]
@@ -148,7 +148,7 @@ const INITIAL_WORKFLOWS: Workflow[] = [
 const INITIAL_EVENTS: CalendarEvent[] = [
   {
     id: "e1",
-    title: "Study React",
+    title: "Study SQL",
     startTime: new Date(), // Defaults to 'today' for testing
     duration: 25,
     type: "task",
@@ -299,7 +299,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   const clearMessages = () => {
-    setMessages([]);
+    setMessages(INITIAL_MESSAGES);
   }
 
   const proposeChanges = (data: { tasks?: Task[], workflows?: Workflow[], events?: CalendarEvent[] }) => {
@@ -313,24 +313,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const confirmChanges = () => {
     if (!pendingData) return;
     
-    // Commit to real database - tasks MUST be added first before workflows
-    // to ensure workflow steps can find their task references
     if (pendingData.tasks.length > 0) {
       setTasks(prev => [...prev, ...pendingData.tasks]);
     }
-    
-    // Use setTimeout to ensure tasks are committed before workflows
-    setTimeout(() => {
-      if (pendingData.workflows.length > 0) {
-        setWorkflows(prev => [...prev, ...pendingData.workflows]);
-      }
-      if (pendingData.events.length > 0) {
-        setEvents(prev => [...prev, ...pendingData.events]);
-      }
-      
-      // Clear ghost data after all updates
-      setPendingData(null);
-    }, 0);
+    if (pendingData.workflows.length > 0) {
+      setWorkflows(prev => [...prev, ...pendingData.workflows]);
+    }
+    if (pendingData.events.length > 0) {
+      setEvents(prev => [...prev, ...pendingData.events]);
+    }
+
+    setPendingData(null);
   };
 
   const discardChanges = () => {

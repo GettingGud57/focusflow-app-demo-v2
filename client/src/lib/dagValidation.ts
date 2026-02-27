@@ -7,7 +7,8 @@ export  function dagValidation(wf: Workflow, wfs: Workflow[]): {
   cyclePath?: string[]; // NEW: Return the actual cycle
 } {
     
-    const graph = buildGraph(wfs);
+    // Include the new workflow in the graph so we traverse its steps too
+    const graph = buildGraph([...wfs, wf]);
       const result = hasCycle({ workflowId: wf.id, graph, visited: {}, recursionStack: {}, path: [] });
 
     if (result.hasCycle && result.cyclePath) {
@@ -26,7 +27,6 @@ export  function dagValidation(wf: Workflow, wfs: Workflow[]): {
 
 
 
-
 function hasCycle({workflowId, graph, visited, recursionStack,path}: {
   workflowId: string;
   graph: { [key: string]: string[] };
@@ -35,27 +35,27 @@ function hasCycle({workflowId, graph, visited, recursionStack,path}: {
   path: string[];
 }): { hasCycle: boolean; cyclePath?: string[] } {
 
+  if (visited[workflowId]) return { hasCycle: false }; //If visted before, no cycle from this node
 
-  recursionStack[workflowId] = true; 
+  recursionStack[workflowId] = true; // Current node is in recursion stack
   path.push(workflowId);
   
-  if (visited[workflowId]) return { hasCycle: false };
 
-  for (let childId of graph[workflowId]) {
+  for (let childId of graph[workflowId] || []) {
     if (recursionStack[childId]) {
       const cycleStart = path.indexOf(childId);
-      return { hasCycle: true, cyclePath: path.slice(cycleStart) };
+      return { hasCycle: true, cyclePath: path.slice(cycleStart) }; // Return the cycle path
 
     } else if (!visited[childId]) {
       const result = hasCycle({ workflowId: childId, graph, visited, recursionStack, path: [...path] });
-      if (result.hasCycle) return result;
+      if (result.hasCycle) return result; // Propagate cycle found in deeper recursion
     }
   }
   
 
   recursionStack[workflowId] = false;
   visited[workflowId] = true;
-  return { hasCycle: false };
+  return { hasCycle: false }; // No cycle found :)
 }
 
 

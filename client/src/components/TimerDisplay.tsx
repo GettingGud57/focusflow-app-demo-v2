@@ -8,7 +8,7 @@ import { useData } from "@/components/data/context/DataContext";
 type TimerState = "idle" | "running" | "paused" | "buffer" | "completed";
 
 interface TimerDisplayProps {
-  taskId: string; // Now requires taskId to connect with global state
+  taskId: string; // Requires taskId to connect with global state
   durationMinutes: number;
   taskTitle: string;
   taskDescription?: string;
@@ -26,14 +26,6 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   
   // Check if THIS task is the one running globally
   const isGloballyRunning = activeTimer?.taskId === taskId;
-  
-  // ============================================================
-  // SMART INITIAL STATE: Calculate correct values on first render
-  // ============================================================
-  // This fixes the "inaccurate time after navigation" bug.
-  // Instead of defaulting to full duration and relying on useEffect to fix it,
-  // we calculate the correct initial values immediately.
-
 
   
   const getInitialTimeLeft = () => {
@@ -57,32 +49,16 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     return "idle";
   };
 
-  // Convert minutes to seconds for internal logic
+  // Convert minutes to seconds 
   const [timeLeft, setTimeLeft] = useState(getInitialTimeLeft);
-  const [bufferTime, setBufferTime] = useState(10); // 10 seconds buffer
+  const [bufferTime, setBufferTime] = useState(10); // 10 sec buffer
   const [state, setState] = useState<TimerState>(getInitialState);
   
   // Use a ref for the interval to clear it easily
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ============================================================
-  // useEffect #1: TASK CHANGE HANDLER (Reset or Restore)
-  // ============================================================
-  // PURPOSE: Handle when the displayed task changes (user selects different task)
-  // 
-  // WHEN IT RUNS: When `taskTitle`, `durationMinutes`, `taskId`, or `activeTimer` changes
-  // 
-  // WHAT IT DOES:
-  //   - Clear any existing interval (stop the countdown)
-  //   - If this task IS the one running globally:
-  //       → Calculate actual remaining time from startTime (RESTORE STATE)
-  //       → This is the FIX for timer resetting when navigating back!
-  //   - If this task is NOT running:
-  //       → Reset to idle with full duration (FRESH START)
-  // 
-  // WHY NEEDED: When you navigate away and back, the component remounts.
-  //             Without this check, it would reset to "idle" even if timer was running.
-  //             The "magic math" (now - startTime) ensures accurate time even after navigation.
+
+
   useEffect(() => {
   // Reset when task changes, BUT check if this task is already running globally
   if (intervalRef.current) clearInterval(intervalRef.current);
@@ -100,7 +76,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     setState(remaining > 0 ? "running" : "buffer");
   } else if (state !== "paused") {
     // Not running AND not paused, safe to reset
-    // (If paused, keep the current timeLeft intact!)
+    // If paused, keep the current timeLeft intact!
     setTimeLeft(durationMinutes * 60);
     setBufferTime(10);
     setState("idle");
@@ -110,30 +86,10 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
 
 
 
-  // ============================================================
-  // useEffect #2: INTERVAL MANAGER (The Actual Countdown)
-  // ============================================================
-  // PURPOSE: Manage the setInterval that ticks every second
-  // 
-  // WHEN IT RUNS: When `state`, `isGloballyRunning`, `activeTimer` changes
-  // 
-  // WHAT IT DOES:
-  //   - STATE = "running" + global timer active:
-  //       → Start interval that calculates remaining time every second
-  //       → Uses (now - startTime) math for drift-proof accuracy
-  //       → When time hits 0, transitions to "buffer" state
-  //   
-  //   - STATE = "buffer":
-  //       → Start interval for 10-second buffer countdown
-  //       → Gives user chance to extend time
-  //       → When buffer hits 0, calls onComplete() and stops global timer
-  //   
-  //   - ANY OTHER STATE:
-  //       → Clear the interval (stop counting)
-  // 
-  // CLEANUP: Returns a function that clears interval when effect re-runs
-  //          or component unmounts (prevents memory leaks)
   const hasCompletedRef = useRef(false);
+
+  //A FSM , we have 5 states : idle, running, paused, buffer, completed
+  // Use useEffect to manage the timer based on the current state and global timer status
 
   // Reset completion flag only when TASK changes (not on every effect run)
   useEffect(() => {
@@ -182,16 +138,16 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
 
   const toggleTimer = () => {
     if (state === "idle") {
-      // Starting fresh - use full duration
+      // Starting fresh : full duration
       setState("running");
       startTimer(taskId, durationMinutes);
     } else if (state === "paused") {
-      // Resuming from pause - use REMAINING time, not full duration
+      // Resuming from pause : use REMAINING time, not full duration
       const remainingMinutes = timeLeft / 60;
       setState("running");
       startTimer(taskId, remainingMinutes);
     } else if (state === "running") {
-      // Pausing - just pause, don't reset
+      // Pausing : just pause, don't reset
       setState("paused");
       stopTimer();
     }
@@ -201,7 +157,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     setState("idle");
     setTimeLeft(durationMinutes * 60);
     setBufferTime(10);
-    stopTimer(); // Also stop the global timer
+    stopTimer(); 
   };
 
   const extendTime = (minutes: number) => {
@@ -222,7 +178,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     : (timeLeft / (durationMinutes * 60)) * 100;
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 w-full max-w-xl mx-auto">
+    <div className="flex flex-col items-center justify-center p-8 w-full max-w-xl mx-auto min-h-[600px]">
       <div className="mb-8 text-center space-y-1">
         <h2 className="text-2xl font-bold tracking-tight">{taskTitle}</h2>
         {taskDescription && (
