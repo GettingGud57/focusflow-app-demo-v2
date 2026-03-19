@@ -1,12 +1,12 @@
 import { Send, X,Check,Plus} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils"; 
 import getRandomColor from "@/lib/randomColor";
 
 import { useData } from "@/components/data/context/DataContext"; 
+import { useApiKey } from "@/hooks/use-api-key";
 
 // Lazy-load `generateProductivityPlan` at call time to avoid bundling server-only
 // dependencies (like the OpenAI SDK) during HMR.
@@ -28,6 +28,7 @@ const [isTyping, setIsTyping] = useState(false);
 const scrollRef = useRef<HTMLDivElement>(null);
 const textareaRef = useRef<HTMLTextAreaElement>(null);
 const {tasks, workflows, messages, addMessage,clearMessages,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
+const { apiKey } = useApiKey();
 
 
 
@@ -80,7 +81,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
       let allNewWorkflows: any[] = [];
 
       const { generateProductivityPlan } = await import("@/lib/ai");
-      const response = await generateProductivityPlan(userText, context);
+      const response = await generateProductivityPlan(userText, context, apiKey);
 
       // Check if AI actually returned any work
       const hasNewData = 
@@ -239,6 +240,9 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
           <X className="w-4 h-4" />
         </Button>
+      </div>
+      <div className="px-4 py-2 text-xs text-muted-foreground border-b">
+        {apiKey ? "Using your saved API key." : "Using project key; add yours in Settings."}
       </div>
 
 

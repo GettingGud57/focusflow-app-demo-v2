@@ -18,7 +18,7 @@ export function CalendarEventCard({ event, isPending, onEdit, onDelete }: Props)
     <div 
       className={cn(
         // Base styles: White background, border, shadow, and specific left-border width
-        "group relative p-2 rounded-r-lg rounded-l-sm text-xs border border-gray-200 border-l-[4px] bg-white shadow-sm hover:shadow-md transition-all cursor-default",
+        "group relative p-2 rounded-r-lg rounded-l-sm text-xs border border-gray-200 border-l-[4px] bg-card shadow-sm hover:shadow-md transition-all cursor-default",
         
         // Dynamic Left Border Color based on type
         isPending
@@ -33,7 +33,7 @@ export function CalendarEventCard({ event, isPending, onEdit, onDelete }: Props)
         
         {/* Actions Container .No actions allowed is isPending */}
         {!isPending && (
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 -mr-1 -mt-1 transition-opacity bg-white/80 backdrop-blur-sm rounded-md">
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 -mr-1 -mt-1 transition-opacity bg-card/90 backdrop-blur-sm rounded-md">
            
            {/* Edit Button */}
            <Button 

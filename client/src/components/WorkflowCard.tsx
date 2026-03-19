@@ -23,7 +23,7 @@ export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
   return (
     // no need  'key={wf.id}' (it belongs in workflowpage)
     <Card className={cn(
-      "group p-6 rounded-2xl border transition-all hover:shadow-lg bg-white",
+      "group p-6 rounded-2xl border transition-all hover:shadow-lg bg-card",
       isPending && "bg-red-50 border-red-300 ring-2 ring-red-200"
     )}>
       <div className="flex justify-between items-start mb-4">

@@ -29,7 +29,7 @@ export default function TasksCards({ task, isPending, onEdit, onDelete }: TaskCa
         <Card 
               key={task.id} 
               className={cn(
-                "group relative p-6 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 bg-white overflow-hidden",
+                "group relative p-6 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 bg-card overflow-hidden",
                 isPending && "bg-red-50 border-red-300 ring-2 ring-red-200"
               )}
             >

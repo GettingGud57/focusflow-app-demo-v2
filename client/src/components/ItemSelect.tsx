@@ -26,7 +26,7 @@ export function ItemSelect({
   
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="w-full h-12 rounded-xl bg-white border-muted shadow-sm">
+      <SelectTrigger className="w-full h-12 rounded-xl bg-card border-muted shadow-sm">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       

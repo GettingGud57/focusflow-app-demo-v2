@@ -18,12 +18,9 @@ export  function dagValidation(wf: Workflow, wfs: Workflow[]): {
         cyclePath: result.cyclePath 
       };
     }
-
-
     return { isValid: true, errors: [] };
 
 }
-
 
 
 

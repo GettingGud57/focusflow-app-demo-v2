@@ -1,16 +1,14 @@
 import OpenAI from 'openai';
 
 import { AiToolCallSchema } from './schemas';
-import { Task, Workflow } from '../components/data/context/DataContext'; 
 import { dagValidation } from "@/lib/dagValidation";
 
-
-// Open Ai Connection
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY, //  key from .env
-  baseURL: 'https://api.groq.com/openai/v1',
-  dangerouslyAllowBrowser: true // REQUIRED since we are running in Vite (Client side)
-});
+const createClient = (apiKeyOverride?: string) =>
+  new OpenAI({
+    apiKey: apiKeyOverride || import.meta.env.VITE_GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
+    dangerouslyAllowBrowser: true
+  });
 
 
 type AiContext = {
@@ -113,7 +111,8 @@ const tools = [
 
 
 
-export async function generateProductivityPlan(userMessage: string, context?: AiContext) {
+export async function generateProductivityPlan(userMessage: string, context?: AiContext, apiKeyOverride?: string) {
+  const openai = createClient(apiKeyOverride);
   try {
     // Context-aware system message
 
@@ -139,7 +138,7 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
 
    
     
-    // Adding existing tasks and workflow context
+    // adding existing tasks and workflow context
     if (context) {
       const tasksList = context.existingTasks.map(t => `"${t.title}" (ID: ${t.id})`).join(", ");
       const workflowsList = context.existingWorkflows.map(w => `"${w.title}" (ID: ${w.id})`).join(", ");
@@ -158,7 +157,7 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
     6. **NO HALLUCINATIONS**: If the user's request doesn't need to involve an existing task, don't force it in. Keep workflows lean and focused.`;
     }
 
-    // message history , role as system and system Message as in ln 113. Seves as context
+    // message history , role as system and system Message as in ln 113. Serves as context
     const messages: any[] = [
       { role: 'system', content: systemMessage }
     ];
@@ -239,7 +238,7 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
      const args = validation.data;
 
      // Validate workflows for cycles
-     /*
+     
      if (args.workflows && args.workflows.length > 0) {
        const existingWorkflows = context?.existingWorkflows || [];
 
@@ -259,7 +258,7 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
          }
          currentAccuWorkflows.push(tempWf);
        }
-     }*/
+     }
       
       return {
         aiResponse: "I've drafted a plan for you. Check the boxes above to confirm.",

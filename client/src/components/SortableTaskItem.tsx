@@ -30,7 +30,7 @@ function SortableTaskItem({ id, item, onRemove }: SortableItemProps) {
       style={style} 
       {...attributes} 
       {...listeners}
-      className="flex items-center gap-3 p-3 bg-white border border-border rounded-xl shadow-sm cursor-grab active:cursor-grabbing"
+      className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl shadow-sm cursor-grab active:cursor-grabbing"
     >
       {isTask ? (
         <div className="w-2 h-8 rounded-full" style={{ backgroundColor: item.task?.color || '#ccc' }} />

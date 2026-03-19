@@ -26,7 +26,7 @@ export function SessionSidebar({ mode, tasks, workflows, selectedId, onSelect, a
 
   return (
     <div className="space-y-6">
-      <Card className="p-6 rounded-2xl border-none shadow-sm bg-white/50 backdrop-blur-sm">
+      <Card className="p-6 rounded-2xl border border-border shadow-sm bg-card/80 backdrop-blur-sm">
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           {mode === "single" ? <CheckCircle2 className="w-4 h-4 text-primary"/> : <ListTodo className="w-4 h-4 text-primary"/>}
           {mode === "single" ? "Select Task" : "Select Workflow"}
@@ -50,7 +50,7 @@ export function SessionSidebar({ mode, tasks, workflows, selectedId, onSelect, a
               {flattenedSteps.map((task, idx) => (
                 <div key={`${task.id}-${idx}`} className={cn(
                     "relative flex items-center gap-3 p-3 rounded-lg border transition-all",
-                    idx === currentStepIndex ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-white border-transparent opacity-50"
+                    idx === currentStepIndex ? "bg-primary/10 border-primary/20 shadow-sm" : "bg-card border-transparent opacity-60"
                   )}>
                   <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] border-2 bg-background z-10",
                       idx === currentStepIndex ? "border-primary text-primary" : "border-muted"

@@ -96,6 +96,9 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     hasCompletedRef.current = false;
   }, [taskId]);
 
+
+
+  
   useEffect(() => {
     if (state === "running" && isGloballyRunning && activeTimer) {
       // Use global timer for accurate time tracking
@@ -135,6 +138,90 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [state, isGloballyRunning, activeTimer, onComplete, stopTimer]);
+
+
+
+/*
+
+  useEffect(() => {
+    // 1. Extract the main timer logic so we can call it on interval AND on tab switch
+    const syncMainTimer = () => {
+      if (!activeTimer) return;
+      const now = Date.now();
+      const secondsPassed = Math.floor((now - activeTimer.startTime) / 1000);
+      const totalSeconds = activeTimer.totalDuration * 60;
+      const remaining = totalSeconds - secondsPassed;
+
+      if (remaining <= 0) {
+        setState("buffer");
+        setTimeLeft(0);
+      } else {
+        setTimeLeft(remaining);
+      }
+    };
+
+    if (state === "running" && isGloballyRunning && activeTimer) {
+      // Use global timer for accurate time tracking
+      intervalRef.current = setInterval(syncMainTimer, 1000);
+
+      // 2. Add visibility listener to instantly snap the UI to the correct time
+      // when the user comes back, bypassing browser throttling.
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          syncMainTimer();
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      };
+      
+    } else if (state === "buffer") {
+      intervalRef.current = setInterval(() => {
+        
+        // 3. THE MAGIC FIX: If the user is on another tab, do absolutely nothing. 
+        // The grace period will patiently wait at whatever time it has left until they look at it.
+        if (document.visibilityState === "hidden") {
+          return; 
+        }
+
+        setBufferTime((prev) => {
+          if (prev <= 1) {
+            if(!hasCompletedRef.current){
+              hasCompletedRef.current = true; // Prevent double-calling
+              setState("completed");
+              stopTimer(); // Stop global timer
+              onComplete();
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [state, isGloballyRunning, activeTimer, onComplete, stopTimer]);
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
 
   const toggleTimer = () => {
     if (state === "idle") {
@@ -259,9 +346,9 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
             >
               <p className="text-yellow-600 font-semibold">Extend session before it completes?</p>
               <div className="flex gap-3">
-                <Button onClick={() => extendTime(1)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+1m</Button>
-                <Button onClick={() => extendTime(5)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+5m</Button>
-                <Button onClick={() => extendTime(10)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+10m</Button>
+                <Button onClick={() => extendTime(durationMinutes*0.1)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+1m</Button>
+                <Button onClick={() => extendTime(durationMinutes*0.2)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+5m</Button>
+                <Button onClick={() => extendTime(durationMinutes*0.5)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+10m</Button>
               </div>
               <Button 
                 variant="ghost" 
