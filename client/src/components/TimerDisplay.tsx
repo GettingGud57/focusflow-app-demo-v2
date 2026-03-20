@@ -4,6 +4,7 @@ import { Play, Pause, RotateCcw, Plus, Check, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useData } from "@/components/data/context/DataContext";
+import {calculateGracePeriodMinutes,formatGraceLabel } from "@/lib/gracePeriod";
 
 type TimerState = "idle" | "running" | "paused" | "buffer" | "completed";
 
@@ -254,6 +255,12 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     startTimer(taskId, minutes);
   };
 
+
+
+  const graceOption1 = calculateGracePeriodMinutes(durationMinutes, 0.1);
+  const graceOption2 = calculateGracePeriodMinutes(durationMinutes, 0.2);
+  const graceOption3 = calculateGracePeriodMinutes(durationMinutes, 0.5);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -346,9 +353,9 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
             >
               <p className="text-yellow-600 font-semibold">Extend session before it completes?</p>
               <div className="flex gap-3">
-                <Button onClick={() => extendTime(durationMinutes*0.1)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+1m</Button>
-                <Button onClick={() => extendTime(durationMinutes*0.2)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+5m</Button>
-                <Button onClick={() => extendTime(durationMinutes*0.5)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">+10m</Button>
+                <Button onClick={() => extendTime(graceOption1)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">{formatGraceLabel(graceOption1)}</Button>
+                <Button onClick={() => extendTime(graceOption2)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">{formatGraceLabel(graceOption2)}</Button>
+                <Button onClick={() => extendTime(graceOption3)} variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-50">{formatGraceLabel(graceOption3)}</Button>
               </div>
               <Button 
                 variant="ghost" 
