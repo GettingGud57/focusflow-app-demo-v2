@@ -1,4 +1,4 @@
-import { Send, X,Check,Plus} from "lucide-react";
+import { Send, X,Check,Plus, Paperclip} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
@@ -25,6 +25,11 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
  const [location] = useLocation();
 const [input, setInput] = useState("");
 const [isTyping, setIsTyping] = useState(false);
+
+const [selectedFile, setSelectedFile] = useState<File | null>(null); // New state for file
+const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden input
+
+
 const scrollRef = useRef<HTMLDivElement>(null);
 const textareaRef = useRef<HTMLTextAreaElement>(null);
 const {tasks, workflows, messages, addMessage,clearMessages,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
@@ -316,7 +321,28 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
 
       {/* INPUT AREA */}
       <div className="p-4 border-t bg-background">
+        {selectedFile && (
+          <div className="text-xs text-muted-foreground mb-2 flex items-center justify-between">
+            <span>📎 {selectedFile.name}</span>
+            <X className="w-3 h-3 cursor-pointer" onClick={() => setSelectedFile(null)} />
+          </div>
+        )}
+
         <div className="flex gap-2 items-end">
+            <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
+          />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9 shrink-0" 
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Paperclip className="w-4 h-4" />
+          </Button>
           <Textarea
             ref={textareaRef}
             placeholder="Ask anything..."
