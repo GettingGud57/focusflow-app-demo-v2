@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils"; 
 import getRandomColor from "@/lib/randomColor";
-
+import { processFile } from "@/lib/readFile"; 
 import { useData } from "@/components/data/context/DataContext"; 
 import { useApiKey } from "@/hooks/use-api-key";
 
@@ -58,7 +58,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
 
   const handleAiSend = async () => {
     // Basic Validation, if nothing in input, return nothing
-    if (!input.trim()) return;
+    if (!input.trim()&& !selectedFile) return;
 
     //  Setup the UI (Show user message, clear input, typing bubble)
     const userText = input;
@@ -72,12 +72,36 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
     setIsTyping(true); 
 
     try {
+
+      let extractedText = "";
+      
+
+      if (selectedFile) {
+        try {
+          // Process the file to extract text
+          extractedText = await processFile(selectedFile);
+        } catch (fileError) {
+          console.error("Failed to read file:", fileError);
+          addMessage("ai", "Sorry, I had trouble reading the attached file. Please make sure it's a supported format.");
+          setIsTyping(false);
+          setSelectedFile(null);
+          return; // Stop execution if file reading fails
+        }
+        
+        // Clear the selected file state after successful extraction
+        setSelectedFile(null); 
+      }
+
+
+
+
       // Prepare Context to give AI full awareness
       const context = {
         existingTasks:tasks , 
         existingWorkflows: workflows,
         currentDate: new Date(),
-        chatHistory: messages // Pass convo history
+        chatHistory: messages , // Pass convo history
+        fileContent: extractedText 
       };
 
       // Create the buckets for all new items
@@ -333,7 +357,9 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
             type="file" 
             ref={fileInputRef} 
             className="hidden" 
+            accept=".pdf,.docx,.txt,.csv,.html,.htm"
             onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
+            
           />
           <Button 
             variant="ghost" 
