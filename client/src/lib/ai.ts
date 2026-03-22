@@ -16,6 +16,7 @@ type AiContext = {
   existingWorkflows: any[]; // existing workflows 
   currentDate: Date;       // current date
   chatHistory?: { role: 'user' | 'ai', text: string }[]; // conversation history, check line 130
+  fileContent?: string;
 };
 
 // OpenAi agent tools (What can the Ai do)
@@ -118,19 +119,20 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
 
 
     let systemMessage = `
-  You are a productivity assistant for Focus Flow.
+      You are a productivity and study assistant for Focus Flow.
   You can ONLY perform these actions:
   - Create tasks (with title, description, duration, color)
   - Create workflows (structured sequences of tasks)
   - Reference or reuse existing tasks/workflows
+  - Answer questions, summarize, or estimate study times for uploaded files.
 
   RULES:
-  - If the user asks something unrelated to productivity/task management, humorously redirect them.
-  - If the user is vague, ask a clarifying question instead of guessing.
+  - If the user provides a file, use it to answer their questions or break it down into a study workflow.
+  - If the user asks something totally unrelated to productivity or the uploaded file, humorously redirect them.
   - Never generate more than 10 tasks at once.
   - Always respect time constraints the user gives.
-  - If a request is harmful or inappropriate, respond with a refusal.
-  - **COHESION RULE**: Workflows must be tightly focused. Every task in a workflow MUST be directly relevant to the workflow's purpose. Do not include unrelated pending tasks from the context unless the user specifically asks to "organize my existing tasks into a workflow".`;
+  - **COHESION RULE**: Workflows must be tightly focused.`;
+
 
 
 
@@ -147,6 +149,8 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
     - Date: ${context.currentDate.toLocaleDateString()}
     - Existing tasks (${context.existingTasks.length}): ${tasksList || "none"}
     - Existing workflows (${context.existingWorkflows.length}): ${workflowsList || "none"}
+    -File content: ${context.fileContent ? context.fileContent: "No file uploaded."}
+
 
     TECHNICAL RULES FOR TOOL USAGE:
     1. When user asks to "merge" or "combine" workflows, use stepType:'workflow' with workflowId to reference existing workflows.
@@ -176,7 +180,7 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
    const wordCount = trimmed.split(/\s+/).filter(w => w.length > 0).length;
 
   // Msg too short
-  if (wordCount  < 3 ) {
+  if (wordCount  < 2 ) {
         return {
           aiResponse: "Your message was a bit too short for me to understand. Could you please provide more details?" ,
           data: { newTasks: [], newWorkflows: [], newEvents: [] }
@@ -198,9 +202,6 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
       data: { newTasks: [], newWorkflows: [], newEvents: [] }   
     }
   }
-
-
-
 
 
     //  add current user message

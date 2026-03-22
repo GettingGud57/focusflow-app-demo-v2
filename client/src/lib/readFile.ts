@@ -1,26 +1,40 @@
 import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 import mammoth from 'mammoth';
 
-import type { TextItem } from 'pdfjs-dist/types/src/display/api';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 
  async function extractTextFromPDF(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text = '';
-  
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-   
-
-
-    const pageText = content.items.map((item) => (item as TextItem).str).join(' ');
-    text += pageText + '\n';
+  try {
+    console.log(`Starting PDF extraction for: ${file.name} (Size: ${file.size} bytes)`);
+    
+    const arrayBuffer = await file.arrayBuffer();
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    console.log(`PDF loaded. Total pages: ${pdf.numPages}`);
+    let text = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((item: any) => item.str).join(' ');
+      text += pageText + '\n';
+    }
+    
+    console.log("PDF extraction successful. Extracted characters:", text.length);
+    return text;
+  } catch (error) {
+    const err = error as any;
+    console.error("PDF.js Extraction Error:", error);
+    console.error("Error name:", err?.name);
+    console.error("Error message:", err?.message);
+    console.error("Error details:", JSON.stringify(err, null, 2));
+    throw new Error("Failed to extract text from PDF. Check console for details.");
+    
   }
-  return text;
 }
 
  async function extractTextFromDocx(file: File): Promise<string> {
@@ -33,7 +47,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
     
     return result.value;
   } catch (error) {
-    console.error("Error extracting text from DOCX:", error);
+    const err = error as any;
+    console.error("Error extracting text from DOCX:", err);
     throw new Error("Failed to read DOCX file.");
   }
 }

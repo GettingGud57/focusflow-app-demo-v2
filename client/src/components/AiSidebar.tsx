@@ -7,6 +7,8 @@ import getRandomColor from "@/lib/randomColor";
 import { processFile } from "@/lib/readFile"; 
 import { useData } from "@/components/data/context/DataContext"; 
 import { useApiKey } from "@/hooks/use-api-key";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Lazy-load `generateProductivityPlan` at call time to avoid bundling server-only
 // dependencies (like the OpenAI SDK) during HMR.
@@ -103,6 +105,8 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
         chatHistory: messages , // Pass convo history
         fileContent: extractedText 
       };
+
+      console.log("Clicked Send with input:", input, "and file:", context );
 
       // Create the buckets for all new items
       
@@ -257,7 +261,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
     <div 
       className={cn(
         "border-l bg-background flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:sticky right-0 top-0 z-40",
-        shouldShow ? "w-80 opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none"
+        shouldShow ? "w-96 md:w-[400px] opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none"
       )}
     >
       {/* HEADER */}
@@ -317,13 +321,15 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
           <div
             key={msg.id}
             className={cn(
-              "rounded-lg p-3 max-w-[85%] text-sm",
+              "rounded-lg p-3 max-w-[95%] text-sm overflow-x-auto",
               msg.role === "user"
                 ? "bg-indigo-600 text-white ml-auto"
-                : "bg-muted text-foreground"
+                : "bg-muted text-foreground prose prose-sm dark:prose-invert max-w-none break-words"
             )}
           >
-            {msg.text}
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {msg.text}
+            </ReactMarkdown>
           </div>
         ))}
         {isTyping && (
@@ -358,7 +364,14 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
             ref={fileInputRef} 
             className="hidden" 
             accept=".pdf,.docx,.txt,.csv,.html,.htm"
-            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
+              onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              console.log("Selected file:", file); // DEBUG: Check if PDF reads here
+              setSelectedFile(file);
+              // Reset the input value so selecting the same file twice triggers onChange
+              if (e.target) e.target.value = ''; 
+            }} 
+            
             
           />
           <Button 
@@ -386,6 +399,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleAiSend();
+               
               }
             }}
             rows={1}
@@ -393,6 +407,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
           />
           <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleAiSend}>
             <Send className="w-4 h-4" />
+
           </Button>
         </div>
       </div>
