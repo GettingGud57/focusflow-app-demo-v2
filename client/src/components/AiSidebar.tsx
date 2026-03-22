@@ -356,8 +356,24 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
             <span 
               className="cursor-pointer hover:underline hover:text-primary transition-colors flex items-center gap-1"
               onClick={() => {
-                const fileUrl = URL.createObjectURL(selectedFile);
-                window.open(fileUrl, '_blank');
+                try {
+                  const fileUrl = URL.createObjectURL(selectedFile);
+                  const link = document.createElement('a');
+                  link.href = fileUrl;
+                  link.target = '_blank';
+                  link.rel = 'noopener noreferrer';
+                  
+                  // Some file types like docx will trigger a download instead of a preview
+                  // Add it to document to ensure click works in all browsers
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  
+                  // Clean up memory after opening
+                  setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+                } catch (e) {
+                  console.error("Failed to open preview:", e);
+                }
               }}
               title="Click to preview file"
             >
