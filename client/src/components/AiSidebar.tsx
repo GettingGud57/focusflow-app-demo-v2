@@ -353,8 +353,17 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
       <div className="p-4 border-t bg-background">
         {selectedFile && (
           <div className="text-xs text-muted-foreground mb-2 flex items-center justify-between">
-            <span>📎 {selectedFile.name}</span>
-            <X className="w-3 h-3 cursor-pointer" onClick={() => setSelectedFile(null)} />
+            <span 
+              className="cursor-pointer hover:underline hover:text-primary transition-colors flex items-center gap-1"
+              onClick={() => {
+                const fileUrl = URL.createObjectURL(selectedFile);
+                window.open(fileUrl, '_blank');
+              }}
+              title="Click to preview file"
+            >
+              📎 {selectedFile.name}
+            </span>
+            <X className="w-3 h-3 cursor-pointer hover:text-destructive transition-colors" onClick={() => setSelectedFile(null)} />
           </div>
         )}
 

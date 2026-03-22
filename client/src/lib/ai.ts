@@ -125,6 +125,7 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
   - Create workflows (structured sequences of tasks)
   - Reference or reuse existing tasks/workflows
   - Answer questions, summarize, or estimate study times for uploaded files.
+  - When making a tool call, always use a text message to explain the plan you are about to create."
 
   RULES:
   - If the user provides a file, use it to answer their questions or break it down into a study workflow.
@@ -262,7 +263,7 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
      }
       
       return {
-        aiResponse: "I've drafted a plan for you. Check the boxes above to confirm.",
+        aiResponse: message.content || "I've drafted a plan for you. Check the boxes above to confirm.",
         data: {
           newTasks: args.tasks || [],
           newWorkflows: args.workflows || [],
