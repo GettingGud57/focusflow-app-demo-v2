@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/components/data/context/DataContext";
+import confetti from "canvas-confetti";
 
 type Mode = "single" | "workflow";
 
@@ -163,6 +164,11 @@ export function useSession(tasks: any[], workflows: any[]) {
       toast({ title: "Task Complete", description: "Great job!" });
       stopTimer(); // Stop the timer when task completes
       setSelectedId(""); 
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
       return;
     } 
 
@@ -181,6 +187,11 @@ export function useSession(tasks: any[], workflows: any[]) {
             toast({ title: "Workflow Finished!", description: "You are a machine." });
             stopTimer();
             setSelectedId("");
+            confetti({
+              particleCount: 200,
+              spread: 100,
+              origin: { y: 0.6 }
+            });
         }
     }
   };

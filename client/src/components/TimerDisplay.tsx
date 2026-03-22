@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useData } from "@/components/data/context/DataContext";
 import {calculateGracePeriodMinutes,formatGraceLabel } from "@/lib/gracePeriod";
 
+
 type TimerState = "idle" | "running" | "paused" | "buffer" | "completed";
 
 interface TimerDisplayProps {
