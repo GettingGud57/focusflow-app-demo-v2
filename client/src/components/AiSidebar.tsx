@@ -363,7 +363,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
             type="file" 
             ref={fileInputRef} 
             className="hidden" 
-            accept=".pdf,.docx,.txt,.csv,.html,.htm"
+            accept=".pdf,.docx,.txt,.csv,.html,.htm,.md"
               onChange={(e) => {
               const file = e.target.files?.[0] || null;
               console.log("Selected file:", file); // DEBUG: Check if PDF reads here

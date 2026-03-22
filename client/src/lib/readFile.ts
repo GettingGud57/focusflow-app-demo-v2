@@ -70,11 +70,12 @@ export async function processFile(file: File): Promise<string> {
     return await extractTextFromDocx(file);
   } 
   
-  // 3. Plain Text, CSV, and HTML
+  // 3. Plain Text, CSV, HTML, and Markdown
   else if (
     file.type === 'text/plain' || fileName.endsWith('.txt') ||
     file.type === 'text/csv' || fileName.endsWith('.csv') ||
-    file.type === 'text/html' || fileName.endsWith('.html') || fileName.endsWith('.htm')
+    file.type === 'text/html' || fileName.endsWith('.html') || fileName.endsWith('.htm') ||
+    file.type === 'text/markdown' || fileName.endsWith('.md')
   ) {
     // Read the file natively as text
     return await file.text();
