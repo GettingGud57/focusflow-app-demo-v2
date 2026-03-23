@@ -17,8 +17,6 @@ No decisions, no multitasking — just work.
 - ⏰ Extension windows - percentage-based window to extend tasks on the run
 - 📅 Calendar integration - Schedule tasks and workflows
 
-## Demo
-[Live Demo](focus-flow-production-a922.up.railway.app)
 
 ## Getting Started
 ### Prerequisites
