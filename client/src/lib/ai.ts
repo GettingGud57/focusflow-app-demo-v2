@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+
 
 import { AiToolCallSchema } from './schemas';
 import { dagValidation } from "@/lib/dagValidation";
@@ -6,23 +6,6 @@ type Provider = 'groq' | 'openai' | 'gemini';
 
 
 
-const createClient = (apiKeyOverride?: string, provider: Provider = 'groq') => {
-  let baseURL = 'https://api.openai.com/v1';
-  if (provider === 'groq') baseURL = 'https://api.groq.com/openai/v1';
-  if (provider === 'gemini') baseURL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
-
-  const fallbackKey = provider === 'groq' 
-    ? import.meta.env.VITE_GROQ_API_KEY 
-    : import.meta.env.VITE_OPENAI_API_KEY;
-
-  
-  return new OpenAI({
-    apiKey: apiKeyOverride || fallbackKey,
-    baseURL: baseURL,
-    dangerouslyAllowBrowser: true
-  
-  });
-};
 
 type AiContext = {
   existingTasks: any[];    // existing takss
@@ -122,46 +105,24 @@ const tools = [
 
 
 
-
-
-
 export async function generateProductivityPlan(userMessage: string, context?: AiContext, apiKeyOverride?: string ) {
   let provider: Provider = 'groq'; 
 
-
   if (apiKeyOverride) {
-    // Anthropic keys start with "sk-ant-"
     if (apiKeyOverride.startsWith('sk-ant-')) {
       throw new Error("Anthropic API keys are not supported yet.");
-    } 
-    // Google/Gemini keys typically start with "AIza"
-    else if (apiKeyOverride.startsWith('AIza')) {
+    } else if (apiKeyOverride.startsWith('AIza')) {
         provider = 'gemini';
-    } 
-    else if (apiKeyOverride.startsWith('gsk_')) {
+    } else if (apiKeyOverride.startsWith('gsk_')) {
       provider = 'groq';
-    } 
-    // OpenAI keys start with "sk-", as long as it wasn't caught by the Anthropic check
-    else if (apiKeyOverride.startsWith('sk-')) {
+    } else if (apiKeyOverride.startsWith('sk-')) {
       provider = 'openai';
-    } 
-    else {
-      throw new Error("Unrecognized API key format. Please use a valid OpenAI or Groq key.");
+    } else {
+      throw new Error("Unrecognized API key format. Please use a valid OpenAI, Gemini, or Groq key.");
     }
   }
 
-  
-  
-  
-  
-  
-  
-  
-  const openai = createClient(apiKeyOverride, provider);
   try {
-    // Context-aware system message
-
-
     let systemMessage = `
       You are a productivity and study assistant for Focus Flow.
   You can ONLY perform these actions:
@@ -178,14 +139,6 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
   - Always respect time constraints the user gives.
   - **COHESION RULE**: Workflows must be tightly focused.`;
 
-
-
-
-
-
-   
-    
-    // adding existing tasks and workflow context
     if (context) {
       const tasksList = context.existingTasks.map(t => `"${t.title}" (ID: ${t.id})`).join(", ");
       const workflowsList = context.existingWorkflows.map(w => `"${w.title}" (ID: ${w.id})`).join(", ");
@@ -194,24 +147,19 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
     - Date: ${context.currentDate.toLocaleDateString()}
     - Existing tasks (${context.existingTasks.length}): ${tasksList || "none"}
     - Existing workflows (${context.existingWorkflows.length}): ${workflowsList || "none"}
-    -File content: ${context.fileContent ? context.fileContent: "No file uploaded."}
-
+    - File content: ${context.fileContent ? context.fileContent: "No file uploaded."}
 
     TECHNICAL RULES FOR TOOL USAGE:
     1. When user asks to "merge" or "combine" workflows, use stepType:'workflow' with workflowId to reference existing workflows.
     2. When reusing existing tasks in a new workflow, use stepType:'task' with taskId to reference them.
     3. Only create NEW tasks (using the 'task' object) when the user explicitly asks for new activities.
     4. Avoid creating duplicates - check existing tasks/workflows first.
-    5. **WORKFLOW INTEGRITY**: Do NOT add existing tasks from the context to a NEWLY generated workflow unless they are logically part of that activity. If the user asks for a 'morning routine', don't include an unrelated task like 'Buy groceries' from the existing list.
+    5. **WORKFLOW INTEGRITY**: Do NOT add existing tasks from the context to a NEWLY generated workflow unless they are logically part of that activity.
     6. **NO HALLUCINATIONS**: If the user's request doesn't need to involve an existing task, don't force it in. Keep workflows lean and focused.`;
     }
 
-    // message history , role as system and system Message as in ln 113. Serves as context
-    const messages: any[] = [
-      { role: 'system', content: systemMessage }
-    ];
+    const messages: any[] = [{ role: 'system', content: systemMessage }];
 
-    //  add previous chat messages to 3nd of message (convert 'ai' role to 'assistant')
     if (context?.chatHistory && context.chatHistory.length > 0) {
       const historyMessages = context.chatHistory.slice(-10).map(msg => ({
         role: msg.role === 'ai' ? 'assistant' : 'user',
@@ -220,107 +168,97 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
       messages.push(...historyMessages);
     }
     
-   const trimmed = userMessage.trim();
+    const trimmed = userMessage.trim();
+    const wordCount = trimmed.split(/\s+/).filter(w => w.length > 0).length;
 
-   const wordCount = trimmed.split(/\s+/).filter(w => w.length > 0).length;
-
-  // Msg too short
-  if (wordCount  < 2 ) {
-        return {
-          aiResponse: "Your message was a bit too short for me to understand. Could you please provide more details?" ,
-          data: { newTasks: [], newWorkflows: [], newEvents: [] }
-        };
-  }
-
-  // Msg too long
-  if (wordCount  > 500 ) {
-    return {
-      aiResponse: "Your message is a bit too long for me to process. Could you please keep it under 500 characters?",
-      data: { newTasks: [], newWorkflows: [], newEvents: [] }
-    };
-  }
-
-  // Empty after trim
-  if (!trimmed) {
-    return {
-      aiResponse: "It seems like your message is empty. Could you please provide some details on what you'd like help with?",
-      data: { newTasks: [], newWorkflows: [], newEvents: [] }   
+    if (wordCount < 2) {
+      return {
+        aiResponse: "Your message was a bit too short for me to understand. Could you please provide more details?",
+        data: { newTasks: [], newWorkflows: [], newEvents: [] }
+      };
     }
-  }
 
+    if (wordCount > 500) {
+      return {
+        aiResponse: "Your message is a bit too long for me to process. Could you please keep it under 500 characters?",
+        data: { newTasks: [], newWorkflows: [], newEvents: [] }
+      };
+    }
 
-    //  add current user message
+    if (!trimmed) {
+      return {
+        aiResponse: "It seems like your message is empty. Could you please provide some details on what you'd like help with?",
+        data: { newTasks: [], newWorkflows: [], newEvents: [] }   
+      }
+    }
+
     messages.push({ role: 'user', content: userMessage });
-     let modelName = 'openai/gpt-oss-120b' ;
-    if (provider === 'openai') modelName = 'gpt-4o-mini';
-    if (provider === 'gemini') modelName = 'gemini-2.5-flash';
 
-    const response = await openai.chat.completions.create({
-      model: modelName,
-      messages: messages,
-      tools: tools,
-      tool_choice: "auto",
+    // Call the backend proxy
+    const response = await fetch('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userMessage, // sending raw message if backend needs it
+        messages,    // sending constructed messages for backend to use directly
+        tools,
+        apiKeyOverride,
+        provider
+      })
     });
 
-    const message = response.choices[0].message;
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`);
+    }
 
-    // Check if the AI decided to use the tool
+    const responseData = await response.json();
+    const message = responseData.choices[0].message;
+
     if (message.tool_calls && message.tool_calls.length > 0) {
       const toolCall = message.tool_calls[0];
       if (toolCall.type === 'function') {
         const rawArgs = JSON.parse(toolCall.function.arguments);
-
         const validation = AiToolCallSchema.safeParse(rawArgs);
 
+        if (!validation.success) {
+          console.error("AI returned malformed data:", validation.error);
+          return {
+            aiResponse: "I tried to build a plan, but the data got a little scrambled. Could we try again?",
+            data: { newTasks: [], newWorkflows: [], newEvents: [] }
+          };
+        }
 
-      if (!validation.success) {
-        console.error("AI returned malformed data:", validation.error);
-      return {
-          aiResponse: "I tried to build a plan, but the data got a little scrambled. Could we try again?",
-          data: { newTasks: [], newWorkflows: [], newEvents: [] }
+        const args = validation.data;
+     
+        if (args.workflows && args.workflows.length > 0) {
+          const existingWorkflows = context?.existingWorkflows || [];
+          const currentAccuWorkflows = [...existingWorkflows];
+          
+          for (const wf of args.workflows) {
+            const tempWf = { ...wf, id: "temp-validation-id" } as any; 
+            const cycleCheck = dagValidation(tempWf, currentAccuWorkflows);
+            
+            if (!cycleCheck.isValid) {
+              return {
+                aiResponse: "I couldn't create that workflow because it would cause an infinite loop.",
+                data: { newTasks: [], newWorkflows: [], newEvents: [] }
+              };
+            }
+            currentAccuWorkflows.push(tempWf);
+          }
+        }
+        
+        return {
+          aiResponse: message.content || "I've drafted a plan for you. Check the boxes above to confirm.",
+          data: {
+            newTasks: args.tasks || [],
+            newWorkflows: args.workflows || [],
+            newEvents: []
+          }
         };
       }
-
-      
-      
-
-     const args = validation.data;
-
-     // Validate workflows for cycles
-     
-     if (args.workflows && args.workflows.length > 0) {
-       const existingWorkflows = context?.existingWorkflows || [];
-
-
-       const currentAccuWorkflows = [...existingWorkflows];
-       
-       for (const wf of args.workflows) {
-         // Create a temp workflow with ID for validation 
-         const tempWf = { ...wf, id: "temp-validation-id" } as any; 
-         const cycleCheck = dagValidation(tempWf, currentAccuWorkflows);
-         
-         if (!cycleCheck.isValid) {
-           return {
-             aiResponse: "I couldn't create that workflow because it would cause an infinite loop.",
-             data: { newTasks: [], newWorkflows: [], newEvents: [] }
-           };
-         }
-         currentAccuWorkflows.push(tempWf);
-       }
-     }
-      
-      return {
-        aiResponse: message.content || "I've drafted a plan for you. Check the boxes above to confirm.",
-        data: {
-          newTasks: args.tasks || [],
-          newWorkflows: args.workflows || [],
-          newEvents: []
-        }
-       }
-      };
     }
 
-    // If it didn't use a tool ,just chat
     return {
       aiResponse: message.content || "I couldn't generate a plan.",
       data: { newTasks: [], newWorkflows: [], newEvents: [] }
@@ -334,3 +272,4 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
     };
   }
 }
+
