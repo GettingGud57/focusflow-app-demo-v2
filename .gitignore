@@ -5,3 +5,9 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+test-ai.js
+test-ai2.js
+test-ai3.js
+test-gemini-notools.js
+test-gemini-req.js
+test-gemini-tools.js

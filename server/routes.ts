@@ -143,8 +143,10 @@ export async function registerRoutes(
       // Use dynamic import for OpenAI to avoid issues if not installed globally
       const { OpenAI } = await import("openai");
       const { apiKeyOverride, provider = "groq", tools, messages } = req.body;
-
-
+      
+      // Load .env variables so we can actually read the fallback keys
+      const dotenv = await import("dotenv");
+      dotenv.config();
 
        let baseURL = 'https://api.openai.com/v1';
       if (provider === 'groq') baseURL = 'https://api.groq.com/openai/v1';
@@ -165,7 +167,7 @@ export async function registerRoutes(
 
 
       let modelName = 'gpt-4o-mini';
-      if (provider === 'groq') modelName = 'gpt-oss-120b';
+      if (provider === 'groq') modelName = 'openai/gpt-oss-120b';
       if (provider === 'gemini') modelName = 'gemini-1.5-flash';
 
       // Minimal tools example, you should pass your actual tools here or from the shared folder
