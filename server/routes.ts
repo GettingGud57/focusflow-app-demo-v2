@@ -142,31 +142,39 @@ export async function registerRoutes(
     try {
       // Use dynamic import for OpenAI to avoid issues if not installed globally
       const { OpenAI } = await import("openai");
-      const { userMessage, apiKeyOverride, context, provider = "groq" } = req.body;
+      const { apiKeyOverride, provider = "groq", tools, messages } = req.body;
 
-      let baseURL = 'https://api.openai.com/v1';
+
+
+       let baseURL = 'https://api.openai.com/v1';
       if (provider === 'groq') baseURL = 'https://api.groq.com/openai/v1';
       if (provider === 'gemini') baseURL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
 
-      const defaultKey = provider === 'groq' 
-        ? process.env.VITE_GROQ_API_KEY || process.env.GROQ_API_KEY
-        : process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+      let defaultKey = process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+      if (provider === 'groq') {
+        defaultKey = process.env.VITE_GROQ_API_KEY || process.env.GROQ_API_KEY;
+      } else if (provider === 'gemini') {
+        defaultKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      }
 
       const openai = new OpenAI({
         apiKey: apiKeyOverride || defaultKey,
         baseURL: baseURL,
       });
 
+
+
       let modelName = 'gpt-4o-mini';
-      if (provider === 'groq') modelName = 'llama-3.3-70b-versatile';
+      if (provider === 'groq') modelName = 'gpt-oss-120b';
       if (provider === 'gemini') modelName = 'gemini-1.5-flash';
 
       // Minimal tools example, you should pass your actual tools here or from the shared folder
       const response = await openai.chat.completions.create({
         model: modelName,
-        messages: [{ role: 'user', content: userMessage }],
-        // tool_choice: "auto",
-        // tools: [...] 
+        messages: messages, // We use the complete messages array sent from the frontend!
+        ...(tools && tools.length > 0 && { tools: tools }),
+        ...(tools && tools.length > 0 && { tool_choice: "auto" }),
+  
       });
 
       res.json(response);
