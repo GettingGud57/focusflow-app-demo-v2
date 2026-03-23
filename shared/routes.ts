@@ -87,7 +87,9 @@ export const api = {
       path: '/api/workflows',
       input: insertWorkflowSchema.extend({
         steps: z.array(z.object({
-          taskId: z.number(),
+          taskId: z.string().optional(),
+          nestedWorkflowId: z.string().optional(),
+          stepType: z.string().default("task"),
           order: z.number(),
         })),
       }),
@@ -101,7 +103,9 @@ export const api = {
       path: '/api/workflows/:id',
       input: insertWorkflowSchema.partial().extend({
         steps: z.array(z.object({
-          taskId: z.number(),
+          taskId: z.string().optional(),
+          nestedWorkflowId: z.string().optional(),
+          stepType: z.string().default("task"),
           order: z.number(),
         })).optional(),
       }),
