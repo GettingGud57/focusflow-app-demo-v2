@@ -11,3 +11,5 @@ test-ai3.js
 test-gemini-notools.js
 test-gemini-req.js
 test-gemini-tools.js
+test-gemini-fetch.js
+test-gemini-real.js

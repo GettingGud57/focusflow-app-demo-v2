@@ -170,14 +170,37 @@ export async function registerRoutes(
       if (provider === 'groq') modelName = 'openai/gpt-oss-120b';
       if (provider === 'gemini') modelName = 'gemini-1.5-flash';
 
-      // Minimal tools example, you should pass your actual tools here or from the shared folder
-      const response = await openai.chat.completions.create({
-        model: modelName,
-        messages: messages, // We use the complete messages array sent from the frontend!
-        ...(tools && tools.length > 0 && { tools: tools }),
-        ...(tools && tools.length > 0 && { tool_choice: "auto" }),
-  
-      });
+      let response;
+
+      if (provider === 'gemini') {
+        const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+        const fetchRes = await fetch(geminiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKeyOverride || defaultKey}`
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: messages,
+            ...(tools && tools.length > 0 && { tools: tools, tool_choice: "auto" })
+          })
+        });
+
+        if (!fetchRes.ok) {
+          const errText = await fetchRes.text();
+          console.error("Gemini Raw Error:", errText);
+          throw new Error(`Gemini API Error: ${fetchRes.status} - ${errText}`);
+        }
+        response = await fetchRes.json();
+      } else {
+        response = await openai.chat.completions.create({
+          model: modelName,
+          messages: messages, // We use the complete messages array sent from the frontend!
+          ...(tools && tools.length > 0 && { tools: tools }),
+          ...(tools && tools.length > 0 && { tool_choice: "auto" }),
+        });
+      }
 
       res.json(response);
     } catch (err: any) {

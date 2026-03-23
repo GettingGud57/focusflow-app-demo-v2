@@ -92,9 +92,8 @@ const tools = [
               required: ["title", "steps"]
             }
           }
-        },
+        }
         // The AI can pick one or the other.
-        required: [] 
       }
     }
   }

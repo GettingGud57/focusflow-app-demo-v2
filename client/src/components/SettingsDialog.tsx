@@ -82,7 +82,7 @@ export function ApiKeyForm({ layout = "page", onSaved }: ApiKeyFormProps) {
 
   const handleSave = () => {
     if (!value.trim()) {
-      toast({ title: "API key required", description: "Please paste your Groq/OpenAI-compatible key.", variant: "destructive" });
+      toast({ title: "API key required", description: "Please paste your Groq/OpenAI/Gemini-compatible key.", variant: "destructive" });
       return;
     }
     saveKey(value.trim());
@@ -104,7 +104,7 @@ export function ApiKeyForm({ layout = "page", onSaved }: ApiKeyFormProps) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <KeyRound className="h-4 w-4" />
-          <span>Groq/OpenAI-compatible key</span>
+          <span>Groq/OpenAI/Gemini-compatible key</span>
         </div>
         <Badge className={statusTone}>{statusLabel}</Badge>
       </div>
