@@ -329,9 +329,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       title: newWorkflow.title,
       description: newWorkflow.description,
       loop: newWorkflow.loop ?? 1,
-      steps: (newWorkflow.steps ?? []).map(s => ({
+      steps: (newWorkflow.steps ?? []).map((s: any) => ({
         taskId: s.taskId,
-        nestedWorkflowId: s.workflowId,
+        nestedWorkflowId: s.workflowId || s.nestedWorkflowId,
         stepType: s.stepType ?? 'task',
         order: s.order,
       })),
@@ -343,9 +343,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await updateWorkflowMutation.mutateAsync({
       id,
       ...updatedFields,
-      steps: updatedFields.steps?.map(s => ({
+      steps: updatedFields.steps?.map((s: any) => ({
         taskId: s.taskId,
-        nestedWorkflowId: s.workflowId,
+        nestedWorkflowId: s.workflowId || s.nestedWorkflowId,
         stepType: s.stepType ?? 'task',
         order: s.order,
       })),
