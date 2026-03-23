@@ -309,7 +309,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // TASK ACTIONS
   // ============================================================
   const addTask = async (newTask: CreateTask) => {
-    await createTaskMutation.mutateAsync(newTask as any);
+    await createTaskMutation.mutateAsync({ ...newTask, userId: "system_seed" } as any);
   };
 
   const updateTask = async (id: string, updatedFields: Partial<Task>) => {
@@ -325,6 +325,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ============================================================
   const addWorkflow = async (newWorkflow: Omit<Workflow, 'id'>) => {
     await createWorkflowMutation.mutateAsync({
+      userId: "system_seed",
       title: newWorkflow.title,
       description: newWorkflow.description,
       loop: newWorkflow.loop ?? 1,
@@ -361,7 +362,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   const addEvent = async (newEvent: Omit<CalendarEvent, 'id'>) => {
-    await createEventMutation.mutateAsync(newEvent as any);
+    await createEventMutation.mutateAsync({ ...newEvent, userId: "system_seed" } as any);
   };
 
   const updateEvent = async (id: string, updatedFields: Partial<CalendarEvent>) => {
