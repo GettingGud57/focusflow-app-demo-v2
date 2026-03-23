@@ -2,17 +2,25 @@ import OpenAI from 'openai';
 
 import { AiToolCallSchema } from './schemas';
 import { dagValidation } from "@/lib/dagValidation";
-type Provider = 'groq' | 'openai'; 
+type Provider = 'groq' | 'openai' | 'gemini'; 
 
 
 
 const createClient = (apiKeyOverride?: string, provider: Provider = 'groq') => {
-  const isGroq = provider === 'groq';
+  let baseURL = 'https://api.openai.com/v1';
+  if (provider === 'groq') baseURL = 'https://api.groq.com/openai/v1';
+  if (provider === 'gemini') baseURL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+
+  const fallbackKey = provider === 'groq' 
+    ? import.meta.env.VITE_GROQ_API_KEY 
+    : import.meta.env.VITE_OPENAI_API_KEY;
+
   
   return new OpenAI({
-    apiKey: apiKeyOverride || (isGroq ? import.meta.env.VITE_GROQ_API_KEY : import.meta.env.VITE_OPENAI_API_KEY),
-    baseURL: isGroq ? 'https://api.groq.com/openai/v1' : 'https://api.openai.com/v1',
+    apiKey: apiKeyOverride || fallbackKey,
+    baseURL: baseURL,
     dangerouslyAllowBrowser: true
+  
   });
 };
 
@@ -124,11 +132,11 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
   if (apiKeyOverride) {
     // Anthropic keys start with "sk-ant-"
     if (apiKeyOverride.startsWith('sk-ant-')) {
-      throw new Error("Anthropic API keys are not supported. Please use OpenAI or Groq.");
+      throw new Error("Anthropic API keys are not supported yet.");
     } 
     // Google/Gemini keys typically start with "AIza"
     else if (apiKeyOverride.startsWith('AIza')) {
-      throw new Error("Gemini API keys are not supported. Please use OpenAI or Groq.");
+        provider = 'gemini';
     } 
     else if (apiKeyOverride.startsWith('gsk_')) {
       provider = 'groq';
@@ -243,7 +251,10 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
 
     //  add current user message
     messages.push({ role: 'user', content: userMessage });
-    const modelName = provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini';
+     let modelName = 'openai/gpt-oss-120b' ;
+    if (provider === 'openai') modelName = 'gpt-4o-mini';
+    if (provider === 'gemini') modelName = 'gemini-2.5-flash';
+
     const response = await openai.chat.completions.create({
       model: modelName,
       messages: messages,
