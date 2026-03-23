@@ -325,6 +325,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ============================================================
   const addWorkflow = async (newWorkflow: Omit<Workflow, 'id'>) => {
     await createWorkflowMutation.mutateAsync({
+      id: (newWorkflow as any).id,
       userId: "system_seed",
       title: newWorkflow.title,
       description: newWorkflow.description,

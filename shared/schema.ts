@@ -80,10 +80,10 @@ export const workflowStepsRelations = relations(workflowSteps, ({ one }) => ({
 
 // === INSERT SCHEMAS ===
 
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true });
-export const insertWorkflowSchema = createInsertSchema(workflows).omit({ id: true });
-export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).omit({ id: true });
-export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({ id: true });
+export const insertTaskSchema = createInsertSchema(tasks).extend({ id: z.string().optional() });
+export const insertWorkflowSchema = createInsertSchema(workflows).extend({ id: z.string().optional() });
+export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).extend({ id: z.string().optional() });
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).extend({ id: z.string().optional() });
 
 // === INFERRED TYPES ===
 

@@ -48,7 +48,7 @@ export class DatabaseStorage implements IStorage {
   async createTask(insertTask: InsertTask): Promise<Task> {
     const [task] = await db.insert(tasks).values({
       ...insertTask,
-      id: randomUUID(),
+      id: insertTask.id ?? randomUUID(),
       userId: insertTask.userId ?? DEFAULT_USER_ID,
     }).returning();
     return task;
@@ -98,7 +98,7 @@ export class DatabaseStorage implements IStorage {
  
   async createWorkflow(req: InsertWorkflow & { steps: { taskId?: string; nestedWorkflowId?: string; stepType: string; order: number }[] }): Promise<WorkflowWithSteps> {
     const { steps, ...workflowData } = req;
-    const workflowId = randomUUID();
+    const workflowId = workflowData.id ?? randomUUID();
  
     const [wf] = await db.insert(workflows).values({
       ...workflowData,
@@ -108,8 +108,8 @@ export class DatabaseStorage implements IStorage {
  
     if (steps && steps.length > 0) {
       await db.insert(workflowSteps).values(
-        steps.map(s => ({
-          id: randomUUID(),
+        steps.map((s: any) => ({
+          id: s.id ?? randomUUID(),
           workflowId: wf.id,
           taskId: s.taskId ?? null,
           nestedWorkflowId: s.nestedWorkflowId ?? null,
@@ -133,8 +133,8 @@ export class DatabaseStorage implements IStorage {
       await db.delete(workflowSteps).where(eq(workflowSteps.workflowId, id));
       if (steps.length > 0) {
         await db.insert(workflowSteps).values(
-          steps.map(s => ({
-            id: randomUUID(),
+          steps.map((s: any) => ({
+            id: s.id ?? randomUUID(),
             workflowId: id,
             taskId: s.taskId ?? null,
             nestedWorkflowId: s.nestedWorkflowId ?? null,
@@ -161,7 +161,7 @@ export class DatabaseStorage implements IStorage {
   async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
     const [created] = await db.insert(calendarEvents).values({
       ...event,
-      id: randomUUID(),
+      id: event.id ?? randomUUID(),
       userId: event.userId ?? DEFAULT_USER_ID,
     }).returning();
     return created;
