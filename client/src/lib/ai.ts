@@ -2,14 +2,19 @@ import OpenAI from 'openai';
 
 import { AiToolCallSchema } from './schemas';
 import { dagValidation } from "@/lib/dagValidation";
+type Provider = 'groq' | 'openai'; 
 
-const createClient = (apiKeyOverride?: string) =>
-  new OpenAI({
-    apiKey: apiKeyOverride || import.meta.env.VITE_GROQ_API_KEY,
-    baseURL: 'https://api.groq.com/openai/v1',
+
+
+const createClient = (apiKeyOverride?: string, provider: Provider = 'groq') => {
+  const isGroq = provider === 'groq';
+  
+  return new OpenAI({
+    apiKey: apiKeyOverride || (isGroq ? import.meta.env.VITE_GROQ_API_KEY : import.meta.env.VITE_OPENAI_API_KEY),
+    baseURL: isGroq ? 'https://api.groq.com/openai/v1' : 'https://api.openai.com/v1',
     dangerouslyAllowBrowser: true
   });
-
+};
 
 type AiContext = {
   existingTasks: any[];    // existing takss
@@ -112,8 +117,39 @@ const tools = [
 
 
 
-export async function generateProductivityPlan(userMessage: string, context?: AiContext, apiKeyOverride?: string) {
-  const openai = createClient(apiKeyOverride);
+export async function generateProductivityPlan(userMessage: string, context?: AiContext, apiKeyOverride?: string ) {
+  let provider: Provider = 'groq'; 
+
+
+  if (apiKeyOverride) {
+    // Anthropic keys start with "sk-ant-"
+    if (apiKeyOverride.startsWith('sk-ant-')) {
+      throw new Error("Anthropic API keys are not supported. Please use OpenAI or Groq.");
+    } 
+    // Google/Gemini keys typically start with "AIza"
+    else if (apiKeyOverride.startsWith('AIza')) {
+      throw new Error("Gemini API keys are not supported. Please use OpenAI or Groq.");
+    } 
+    else if (apiKeyOverride.startsWith('gsk_')) {
+      provider = 'groq';
+    } 
+    // OpenAI keys start with "sk-", as long as it wasn't caught by the Anthropic check
+    else if (apiKeyOverride.startsWith('sk-')) {
+      provider = 'openai';
+    } 
+    else {
+      throw new Error("Unrecognized API key format. Please use a valid OpenAI or Groq key.");
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  const openai = createClient(apiKeyOverride, provider);
   try {
     // Context-aware system message
 
@@ -207,9 +243,9 @@ export async function generateProductivityPlan(userMessage: string, context?: Ai
 
     //  add current user message
     messages.push({ role: 'user', content: userMessage });
-
+    const modelName = provider === 'groq' ? 'openai/gpt-oss-120b' : 'gpt-4o-mini';
     const response = await openai.chat.completions.create({
-      model: 'openai/gpt-oss-120b',
+      model: modelName,
       messages: messages,
       tools: tools,
       tool_choice: "auto",
