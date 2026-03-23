@@ -18,7 +18,7 @@ No decisions, no multitasking — just work.
 - 📅 Calendar integration - Schedule tasks and workflows
 
 ## Demo
-[Live Demo](https://your-vercel-url.vercel.app)
+[Live Demo](focus-flow-production-a922.up.railway.app)
 
 ## Getting Started
 ### Prerequisites
