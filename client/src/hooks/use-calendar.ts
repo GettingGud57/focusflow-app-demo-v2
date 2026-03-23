@@ -34,6 +34,25 @@ export function useCreateCalendarEvent() {
   });
 }
 
+export function useUpdateCalendarEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { id: string } & UpdateCalendarEventRequest) => {
+      const url = buildUrl(api.calendar.update.path, { id: data.id });
+      const { id, ...updateData } = data;
+      const res = await fetch(url, {
+        method: api.calendar.update.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update event");
+      return api.calendar.update.responses[200].parse(await res.json());
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.calendar.list.path] }),
+  });
+}
+
 export function useDeleteCalendarEvent() {
   const queryClient = useQueryClient();
   return useMutation({

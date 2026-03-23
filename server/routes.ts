@@ -183,7 +183,7 @@ async function seedDatabase() {
     // Create a calendar event
     await storage.createCalendarEvent({
       userId: defaultUserId,
-       title: "Morning Focus",
+      title: "Morning Focus",
       startTime: new Date(),
       duration: 60,
       type: "workflow",
@@ -191,5 +191,3 @@ async function seedDatabase() {
     });
   }
 }
- 
-    

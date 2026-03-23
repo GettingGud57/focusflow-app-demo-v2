@@ -1,15 +1,20 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-
+import { useQueryClient } from '@tanstack/react-query';
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks';
+import { useWorkflows, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow } from '@/hooks/use-workflows';
+import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent } from '@/hooks/use-calendar';
+import { api } from '@shared/routes';
 
 export type Task = {
   id: string;
+  userId?: string;
   title: string;
   description?: string;
   duration: number;
   color: string;
 };
 
-export type CreateTask = Omit<Task, 'id'>;
+export type CreateTask = Omit<Task, 'id' | 'userId'>;
 
 
 export type WorkflowSteps = {
@@ -22,6 +27,7 @@ export type WorkflowSteps = {
 
 export type Workflow = {
   id: string;
+  userId?: string;
   title: string;
   description?: string;
   steps: WorkflowSteps[];
@@ -31,6 +37,7 @@ export type Workflow = {
 
 export type CalendarEvent = {
   id: string;
+  userId?: string;
   title: string;
   startTime: Date; // storing as Date object makes math easier than strings
   duration: number; // in minutes
@@ -74,32 +81,34 @@ interface DataContextType {
   messages: ChatMessage[]; 
   activeTimer: ActiveTimer;
   pendingData: PendingDataPayload | null;
+  isLoading: boolean;
 
 
 
   getWorkflowById: (workflowId: string) => Workflow | undefined; // ADD THIS
-  addWorkflow: (workflow: Omit<Workflow, 'id'>) => void;
-  updateWorkflow: (id: string, workflow: Partial<Workflow>) => void;
-  deleteWorkflow: (id: string) => void;
+   addWorkflow: (workflow: Omit<Workflow, 'id'>) => Promise<void>;
+  updateWorkflow: (id: string, workflow: Partial<Workflow>) => Promise<void>;
+    deleteWorkflow: (id: string) => Promise<void>;
   flattenWorkflow: (workflowId: string) => Task[]; // ADD THIS
   // add addTask/updateTask later if needed // added
   getTaskById: (taskId: string) => Task | undefined; // Helper to look up tasks
-  addTask: (task: CreateTask) => void;
-  updateTask: (id: string, task: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
-  // calendar actions
-  addEvent: (event: Omit<CalendarEvent, 'id'>) => void;
-  updateEvent: (id: string, event: Partial<CalendarEvent>) => void;
-  deleteEvent: (id: string) => void;
+    addTask: (task: CreateTask) => Promise<void>;
+  updateTask: (id: string, task: Partial<Task>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+ // Calendar
+  addEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<void>;
+  updateEvent: (id: string, event: Partial<CalendarEvent>) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
   toggleEventCompletion: (id: string) => void;
   addMessage: (role: 'user' | 'ai', text: string) => void;
   clearMessages: () => void;
   startTimer: (taskId: string, duration: number) => void;
   stopTimer: () => void;
   // [CLEANER] And here
-  proposeChanges: (data: Partial<PendingDataPayload>) => void; // Partial lets you pass just tasks if you want
-  confirmChanges: () => void;
+  proposeChanges: (data: Partial<PendingDataPayload>) => void;
+  confirmChanges: () => Promise<void>;
   discardChanges: () => void;
+
 
 
 }
@@ -108,7 +117,7 @@ interface DataContextType {
 
 
 
-
+/*
 
 const INITIAL_TASKS: Task[] =  [
        { id: "1", title: "Study SQL", description: "get Cooked", duration: 25, color: "#3b82f6" },
@@ -157,7 +166,7 @@ const INITIAL_EVENTS: CalendarEvent[] = [
   }
 ];
 
-
+*/
 
 const INITIAL_MESSAGES: ChatMessage[] = [
     { 
@@ -167,12 +176,6 @@ const INITIAL_MESSAGES: ChatMessage[] = [
       timestamp: new Date() 
     }
   ];
-
-
-
-
-
-const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const loadFromStorage = <T,>(key: string, fallback: T): T => {
   if (typeof window === "undefined") return fallback;
@@ -184,6 +187,14 @@ const loadFromStorage = <T,>(key: string, fallback: T): T => {
     return fallback;
   }
 };
+
+
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+
+
+
 
 // Migration: Add stepType to old workflow steps that don't have it
 const migrateWorkflows = (workflows: Workflow[]): Workflow[] => {
@@ -197,6 +208,323 @@ const migrateWorkflows = (workflows: Workflow[]): Workflow[] => {
 };
  
 
+
+
+export function DataProvider({ children }: { children: ReactNode }) {
+   const queryClient = useQueryClient();
+
+     // API DATA (from hooks)
+  // ============================================================
+  const { data: tasksData = [], isLoading: tasksLoading } = useTasks();
+  const { data: workflowsData = [], isLoading: workflowsLoading } = useWorkflows();
+  const { data: eventsData = [], isLoading: eventsLoading } = useCalendarEvents();
+
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+
+  const createWorkflowMutation = useCreateWorkflow();
+  const updateWorkflowMutation = useUpdateWorkflow();
+  const deleteWorkflowMutation = useDeleteWorkflow();
+
+  const createEventMutation = useCreateCalendarEvent();
+  const updateEventMutation = useUpdateCalendarEvent();
+  const deleteEventMutation = useDeleteCalendarEvent();
+
+
+  const tasks: Task[] = tasksData.map((t: any) => ({
+    id: t.id,
+    title: t.title,
+    description: t.description ?? undefined,
+    duration: t.duration,
+    color: t.color ?? "#3b82f6",
+    userId: t.userId,
+  }));
+
+
+ const workflows: Workflow[] = workflowsData.map((wf: any) => ({
+    id: wf.id,
+    title: wf.title,
+    description: wf.description ?? undefined,
+    loop: wf.loop ?? 1,
+    userId: wf.userId,
+    steps: (wf.steps ?? []).map((s: any) => ({
+      id: s.id,
+      stepType: s.stepType ?? 'task',
+      taskId: s.taskId ?? undefined,
+      workflowId: s.nestedWorkflowId ?? undefined,
+      nestedWorkflowId: s.nestedWorkflowId ?? undefined,
+      order: s.order,
+    })),
+  }));
+
+
+
+
+  const events: CalendarEvent[] = eventsData.map((e: any) => ({
+    id: e.id,
+    title: e.title,
+    startTime: new Date(e.startTime),
+    duration: e.duration,
+    type: e.type,
+    referenceId: e.referenceId ?? "",
+    isCompleted: e.isCompleted ?? false,
+    userId: e.userId,
+  }));
+
+
+  const isLoading = tasksLoading || workflowsLoading || eventsLoading;
+
+   // ============================================================
+  // LOCAL STATE (stays in localStorage)
+  // ============================================================
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    loadFromStorage("myApp_chat", INITIAL_MESSAGES)
+  );
+  const [activeTimer, setActiveTimer] = useState<ActiveTimer>(() =>
+    loadFromStorage("myApp_timer", null)
+  );
+  const [pendingData, setPendingData] = useState<PendingDataPayload | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("myApp_chat", JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem("myApp_timer", JSON.stringify(activeTimer));
+  }, [activeTimer]);
+
+
+
+
+  // HELPERS
+  // ============================================================
+  const getTaskById = (taskId: string): Task | undefined =>
+    tasks.find(t => t.id === taskId);
+
+  const getWorkflowById = (workflowId: string): Workflow | undefined =>
+    workflows.find(wf => wf.id === workflowId);
+
+  // ============================================================
+  // TASK ACTIONS
+  // ============================================================
+  const addTask = async (newTask: CreateTask) => {
+    await createTaskMutation.mutateAsync(newTask as any);
+  };
+
+  const updateTask = async (id: string, updatedFields: Partial<Task>) => {
+    await updateTaskMutation.mutateAsync({ id, ...updatedFields } as any);
+  };
+
+  const deleteTask = async (id: string) => {
+    await deleteTaskMutation.mutateAsync(id);
+  };
+
+  // ============================================================
+  // WORKFLOW ACTIONS
+  // ============================================================
+  const addWorkflow = async (newWorkflow: Omit<Workflow, 'id'>) => {
+    await createWorkflowMutation.mutateAsync({
+      title: newWorkflow.title,
+      description: newWorkflow.description,
+      loop: newWorkflow.loop ?? 1,
+      steps: (newWorkflow.steps ?? []).map(s => ({
+        taskId: s.taskId,
+        nestedWorkflowId: s.workflowId,
+        stepType: s.stepType ?? 'task',
+        order: s.order,
+      })),
+    } as any);
+  };
+
+
+   const updateWorkflow = async (id: string, updatedFields: Partial<Workflow>) => {
+    await updateWorkflowMutation.mutateAsync({
+      id,
+      ...updatedFields,
+      steps: updatedFields.steps?.map(s => ({
+        taskId: s.taskId,
+        nestedWorkflowId: s.workflowId,
+        stepType: s.stepType ?? 'task',
+        order: s.order,
+      })),
+    } as any);
+  };
+
+  const deleteWorkflow = async (id: string) => {
+    await deleteWorkflowMutation.mutateAsync(id);
+  };
+
+  // ============================================================
+  // CALENDAR ACTIONS
+  // ============================================================
+
+
+  const addEvent = async (newEvent: Omit<CalendarEvent, 'id'>) => {
+    await createEventMutation.mutateAsync(newEvent as any);
+  };
+
+  const updateEvent = async (id: string, updatedFields: Partial<CalendarEvent>) => {
+    await updateEventMutation.mutateAsync({ id, ...updatedFields } as any);
+  };
+
+  const deleteEvent = async (id: string) => {
+    await deleteEventMutation.mutateAsync(id);
+  };
+
+  const toggleEventCompletion = (id: string) => {
+    const event = events.find(e => e.id === id);
+    if (event) updateEvent(id, { isCompleted: !event.isCompleted });
+  };
+
+
+
+  // ============================================================
+  // PENDING DATA (AI proposals)
+  // ============================================================
+  const proposeChanges = (data: Partial<PendingDataPayload>) => {
+    setPendingData({
+      tasks: data.tasks || [],
+      workflows: data.workflows || [],
+      events: data.events || [],
+    });
+  };
+
+  const confirmChanges = async () => {
+    if (!pendingData) return;
+    for (const task of pendingData.tasks) {
+      await addTask(task);
+    }
+    for (const workflow of pendingData.workflows) {
+      await addWorkflow(workflow);
+    }
+    for (const event of pendingData.events) {
+      await addEvent(event);
+    }
+    setPendingData(null);
+  };
+
+  const discardChanges = () => setPendingData(null);
+
+   // ============================================================
+  // MESSAGES
+  // ============================================================
+  const addMessage = (role: 'user' | 'ai', text: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setMessages(prev => [...prev, { id, role, text, timestamp: new Date() }]);
+  };
+
+  const clearMessages = () => setMessages(INITIAL_MESSAGES);
+
+  // ============================================================
+  // TIMER
+  // ============================================================
+  const startTimer = (taskId: string, duration: number) => {
+    setActiveTimer({ taskId, startTime: Date.now(), totalDuration: duration });
+  };
+
+  const stopTimer = () => setActiveTimer(null);
+
+
+  // ============================================================
+  // FLATTEN WORKFLOW (unchanged logic)
+  // ============================================================
+  const flattenWorkflow = (workflowId: string, applyLoops: boolean = false): Task[] => {
+    const workflow = getWorkflowById(workflowId);
+    if (!workflow) return [];
+
+    const flatTasks: Task[] = [];
+    const sortedSteps = [...workflow.steps].sort((a, b) => a.order - b.order);
+
+    for (const step of sortedSteps) {
+      const stepType = step.stepType || 'task';
+      if (stepType === 'task' && step.taskId) {
+        const task = getTaskById(step.taskId);
+        if (task) flatTasks.push(task);
+      } else if (stepType === 'workflow' && step.workflowId) {
+        const nestedTasks = flattenWorkflow(step.workflowId, true);
+        flatTasks.push(...nestedTasks);
+      }
+    }
+
+    if (applyLoops && workflow.loop && workflow.loop > 1) {
+      const originalTasks = [...flatTasks];
+      for (let i = 1; i < workflow.loop; i++) {
+        flatTasks.push(...originalTasks);
+      }
+    }
+
+    return flatTasks;
+  };
+
+  return (
+    <DataContext.Provider value={{
+      tasks,
+      workflows,
+      events,
+      messages,
+      pendingData,
+      activeTimer,
+      isLoading,
+      getTaskById,
+      getWorkflowById,
+      addWorkflow,
+      updateWorkflow,
+      deleteWorkflow,
+      addTask,
+      updateTask,
+      deleteTask,
+      addEvent,
+      updateEvent,
+      deleteEvent,
+      toggleEventCompletion,
+      addMessage,
+      clearMessages,
+      proposeChanges,
+      confirmChanges,
+      discardChanges,
+      startTimer,
+      stopTimer,
+      flattenWorkflow,
+    }}>
+      {children}
+    </DataContext.Provider>
+  );
+}
+
+export function useData() {
+  const context = useContext(DataContext);
+  if (!context) {
+    throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 export function DataProvider({ children }: { children: ReactNode }) {
   // The "Database" lives here in State
   const [tasks, setTasks] = useState<Task[]>(() => 
@@ -264,7 +592,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   // Calendar Events
-  const addEvent = (newEvent: Omit<CalendarEvent, 'id'>) => {
+  const addEvent = async (newEvent: Omit<CalendarEvent, 'id'>) => {
     const id = Math.random().toString(36).substr(2, 9);
     setEvents(prev => [...prev, { ...newEvent, id }]);
   };
@@ -444,3 +772,4 @@ export function useData() {
   }
   return context;
 }
+  */
