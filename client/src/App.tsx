@@ -17,11 +17,16 @@ import { DataProvider } from "@/components/data/context/DataContext";
 import { FloatingButton } from "./components/FloatingButton";
 import { AiSidebar } from "./components/AiSidebar";
 import { useTheme } from "@/hooks/use-theme";
+import { useAlarm } from "@/hooks/use-alarm";
 import { SettingsDialog } from "./components/SettingsDialog";
 function Router() {
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [, setLocation] = useLocation();
+
+  // Mounted here rather than in TimerDisplay so the alarm still fires when
+  // you're on /tasks or /calendar instead of the Dashboard.
+  useAlarm();
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">

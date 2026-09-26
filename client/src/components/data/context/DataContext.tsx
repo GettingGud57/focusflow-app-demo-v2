@@ -4,6 +4,7 @@ import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/u
 import { useWorkflows, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow } from '@/hooks/use-workflows';
 import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent } from '@/hooks/use-calendar';
 import { api } from '@shared/routes';
+import { unlockAudio } from '@/lib/alarm';
 
 export type Task = {
   id: string;
@@ -422,6 +423,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // TIMER
   // ============================================================
   const startTimer = (taskId: string, duration: number) => {
+    // startTimer is only ever reached from a button press, which makes this the
+    // one place we can legally unlock audio: an AudioContext can only be resumed
+    // from inside a user gesture. Do it anywhere else and the alarm silently
+    // never plays. See client/src/lib/alarm.ts
+    unlockAudio();
     setActiveTimer({ taskId, startTime: Date.now(), totalDuration: duration });
   };
 
