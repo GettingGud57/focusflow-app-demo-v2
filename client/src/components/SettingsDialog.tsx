@@ -1,4 +1,4 @@
-import { KeyRound, Moon, List, Volume2 } from "lucide-react";
+import { KeyRound, Moon, List, Volume2, Timer } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -8,9 +8,10 @@ export type SettingsDialogProps = {
   onSelectAppearance: () => void;
   onSelectApi: () => void;
   onSelectSoundSettings: () => void;
+  onSelectTimerSettings: () => void;
 };
 
-export function SettingsDialog({ open, onOpenChange, onSelectAppearance, onSelectApi, onSelectSoundSettings }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, onSelectAppearance, onSelectApi, onSelectSoundSettings, onSelectTimerSettings }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -31,6 +32,10 @@ export function SettingsDialog({ open, onOpenChange, onSelectAppearance, onSelec
             onOpenChange(false);
             onSelectSoundSettings();
           }}
+          onSelectTimerSettings={() => {
+            onOpenChange(false);
+            onSelectTimerSettings();
+          }}
         />
       </DialogContent>
     </Dialog>
@@ -41,9 +46,10 @@ type SettingsMenuProps = {
   onSelectAppearance: () => void;
   onSelectApi: () => void;
   onSelectSoundSettings: () => void;
+  onSelectTimerSettings: () => void;
 };
 
-function SettingsMenu({ onSelectAppearance, onSelectApi, onSelectSoundSettings }: SettingsMenuProps) {
+function SettingsMenu({ onSelectAppearance, onSelectApi, onSelectSoundSettings, onSelectTimerSettings }: SettingsMenuProps) {
   return (
     <div className="space-y-3">
       <Button variant="outline" className="w-full justify-between" onClick={onSelectAppearance}>
@@ -55,6 +61,12 @@ function SettingsMenu({ onSelectAppearance, onSelectApi, onSelectSoundSettings }
       <Button variant="outline" className="w-full justify-between" onClick={onSelectApi}>
         <span className="flex items-center gap-2">
           <KeyRound className="h-4 w-4" /> API Key
+        </span>
+        <List className="h-4 w-4 text-muted-foreground" />
+      </Button>
+      <Button variant="outline" className="w-full justify-between" onClick={onSelectTimerSettings}>
+        <span className="flex items-center gap-2">
+          <Timer className="h-4 w-4" /> Timer
         </span>
         <List className="h-4 w-4 text-muted-foreground" />
       </Button>

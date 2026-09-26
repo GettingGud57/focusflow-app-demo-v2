@@ -262,6 +262,19 @@ const REMINDER: Tone[] = [
   { freq: 587, duration: 0.09, gap: 0, volume: 0.13 },
 ];
 
+// Flow mode: one step just handed off to the next. Two quick rising tones -
+// shaped as "onwards", distinct from BEEPS (three flat then one high, "stop")
+// and from REMINDER (two flat low blips). Loud enough to hear mid-set, since the
+// whole point is that you aren't looking.
+//
+// Only ONE transition cue for now: steps are just tasks, so the app has no way
+// to know which are work and which are rest. Telling "lift" from "rest" apart
+// would need that distinction in the data model first.
+const STEP_ADVANCE: Tone[] = [
+  { freq: 784, duration: 0.1, gap: 0.03, volume: 0.3 },
+  { freq: 1175, duration: 0.18, gap: 0, volume: 0.3 },
+];
+
 // ------------------------------------------------------------
 // Public API
 // ------------------------------------------------------------
@@ -309,6 +322,13 @@ export const alarm = {
     if (!settings.enabled) return;
     void playCue(findCue(settings.timeUpCue) ?? TIME_UP_CUES[0], BEEPS);
     vibrate([250, 110, 250, 110, 420]);
+  },
+
+  /** Flow mode: this step is done and the next one is starting itself. */
+  stepAdvance() {
+    if (!loadSoundSettings().enabled) return;
+    playTones(STEP_ADVANCE);
+    vibrate([140, 80, 200]);
   },
 
   /** Still in overtime. Softer, and capped by the caller. */

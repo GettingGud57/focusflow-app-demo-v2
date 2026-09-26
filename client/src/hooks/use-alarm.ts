@@ -17,9 +17,7 @@ const REMINDER_EVERY_MS = 2 * 60 * 1000;
 const MAX_REMINDERS = 5;
 
 export function useAlarm() {
-  const { activeTimer } = useData();
-
-    
+  const { activeTimer, autoAdvance } = useData();
 
   // Identifies one specific run. Pausing and resuming calls startTimer again
   // with a fresh startTime, which moves the deadline - so a new key means
@@ -57,9 +55,18 @@ export function useAlarm() {
       if (!firedRef.current) {
         firedRef.current = true;
         lastReminderAtRef.current = Date.now();
-        alarm.timeUp();
+        // Flow mode means the chain keeps moving, so "time's up" is the wrong
+        // message - the right one is "next". TimerDisplay does the advancing;
+        // this only makes the noise, and each side has its own latch so they
+        // can't double up.
+        if (autoAdvance) alarm.stepAdvance();
+        else alarm.timeUp();
         return;
       }
+
+      // In flow mode there is no overtime to be reminded about - the step either
+      // advanced or the workflow ended.
+      if (autoAdvance) return;
 
       // Overtime runs forever by design, which is exactly why silence is risky:
       // miss the alarm and you could sit in overtime for an hour none the wiser.
@@ -87,7 +94,7 @@ export function useAlarm() {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [activeTimer]);
+  }, [activeTimer, autoAdvance]);
 
 
 

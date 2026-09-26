@@ -81,6 +81,12 @@ interface DataContextType {
   events: CalendarEvent[];
   messages: ChatMessage[]; 
   activeTimer: ActiveTimer;
+  // Flow mode. Lives here rather than in useSession because TWO unrelated
+  // consumers need it: TimerDisplay (to auto-advance instead of entering
+  // overtime) and useAlarm (to play a "next step" cue instead of "time's up").
+  // Shared state belongs where the shared consumers can reach it.
+  autoAdvance: boolean;
+  setAutoAdvance: (value: boolean) => void;
   pendingData: PendingDataPayload | null;
   isLoading: boolean;
  
@@ -286,6 +292,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [activeTimer, setActiveTimer] = useState<ActiveTimer>(() =>
     loadFromStorage("myApp_timer", null)
   );
+  // Flow mode: off by default, because auto-advance surprises you the first time.
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(() =>
+    loadFromStorage("myApp_autoAdvance", false)
+  );
   const [pendingData, setPendingData] = useState<PendingDataPayload | null>(null);
 
   useEffect(() => {
@@ -295,6 +305,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("myApp_timer", JSON.stringify(activeTimer));
   }, [activeTimer]);
+
+  useEffect(() => {
+    localStorage.setItem("myApp_autoAdvance", JSON.stringify(autoAdvance));
+  }, [autoAdvance]);
 
 
 
@@ -474,6 +488,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       messages,
       pendingData,
       activeTimer,
+      autoAdvance,
+      setAutoAdvance,
       isLoading,
       getTaskById,
       getWorkflowById,

@@ -26,7 +26,7 @@ interface TimerDisplayProps {
 
 
 export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescription, onComplete, onSkip, color = "#f97316", footer }: TimerDisplayProps) {
-  const { activeTimer, startTimer, stopTimer } = useData();
+  const { activeTimer, startTimer, stopTimer, autoAdvance } = useData();
 
   // Check if THIS task is the one running globally
   const isGloballyRunning = activeTimer?.taskId === taskId;
@@ -119,10 +119,20 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
         if(remaining !== null){
           setTimeLeft(remaining);
 
-          // The state transition is its own latch: once we're in "overtime"
-          // this branch can't run again, so the crossing fires exactly once.
+          // The state transition is its own latch: once we leave "running" this
+          // branch can't run again, so the crossing fires exactly once.
           if (remaining <= 0 && state === "running") {
-            setState("overtime");
+            if (autoAdvance) {
+              // Flow mode: hand off without waiting to be asked. Overtime and
+              // flow mode are mutually exclusive - auto-advance fires AT zero,
+              // so an overtime state never exists here.
+              if (!hasCompletedRef.current) {
+                hasCompletedRef.current = true;
+                onComplete();
+              }
+            } else {
+              setState("overtime");
+            }
           }
         }
 
@@ -135,7 +145,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [state, isGloballyRunning, activeTimer]);
+  }, [state, isGloballyRunning, activeTimer, autoAdvance, onComplete]);
 
 
 

@@ -40,7 +40,7 @@ const saveSession = (state: SessionState) => {
 
 export function useSession(tasks: any[], workflows: any[]) {
   const { toast } = useToast();
-  const { activeTimer, stopTimer, getTaskById, flattenWorkflow } = useData();
+  const { activeTimer, startTimer, stopTimer, getTaskById, flattenWorkflow, autoAdvance } = useData();
   
   
   // ============================================================
@@ -184,18 +184,27 @@ export function useSession(tasks: any[], workflows: any[]) {
     } 
 
 
+    // Flow mode: start the next step immediately instead of leaving it idle
+    // waiting for a press. This is the whole difference between the two modes -
+    // everything else about the chain is identical.
+    const handOffTo = (task: any | undefined) => {
+      if (autoAdvance && task) startTimer(task.id, task.duration);
+      else stopTimer();
+    };
+
     if (currentStepIndex < flattenedTasks.length - 1) {
-      stopTimer();
-      setCurrentStepIndex(prev => prev + 1); 
- 
+      const nextIndex = currentStepIndex + 1;
+      setCurrentStepIndex(nextIndex);
+      handOffTo(flattenedTasks[nextIndex]);
+
     } else {
         // Check against our LOCAL target
         if (currentLoopIndex < targetLoops - 1) {
-            stopTimer();
             setCurrentLoopIndex(prev => prev + 1);
             setCurrentStepIndex(0);
+            handOffTo(flattenedTasks[0]); // next cycle restarts at the top
             toast({ title: "Cycle Complete", description: `Starting cycle ${currentLoopIndex + 2} of ${targetLoops}` });
- 
+
         } else {
             toast({ title: "Workflow Finished!", description: "You are a machine." });
             stopTimer();

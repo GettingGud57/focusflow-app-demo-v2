@@ -13,6 +13,7 @@ import CalendarPage from "@/pages/CalendarPage";
 import AppearancePage from "@/pages/AppearancePage";
 import ApiKeyPage from "@/pages/ApiKeyPage";
 import SoundPage from "@/pages/SoundPage";
+import TimerPage from "@/pages/TimerPage";
 import NotFound from "@/pages/not-found";
 import { DataProvider } from "@/components/data/context/DataContext";
 import { FloatingButton } from "./components/FloatingButton";
@@ -41,6 +42,7 @@ function Router() {
           <Route path="/appearance" component={AppearancePage} />
           <Route path="/api-key" component={ApiKeyPage} />
           <Route path="/sound" component={SoundPage} />
+          <Route path="/timer" component={TimerPage} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -60,6 +62,10 @@ function Router() {
         onSelectSoundSettings={() => {
           setIsSettingsOpen(false);
           setLocation("/sound");
+        }}
+        onSelectTimerSettings={() => {
+          setIsSettingsOpen(false);
+          setLocation("/timer");
         }}
       />
     </div>
