@@ -11,6 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from "lucide-react";
 import{useData} from "@/components/data/context/DataContext";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 
 export default function Dashboard() {
@@ -27,7 +37,14 @@ export default function Dashboard() {
   // 2. The Brain 🧠
   const session = useSession(tasks, workflows);
 
-  const { mode, selectedId, currentStepIndex, activeItem, currentTask, currentLoopIndex, targetLoops } = session.state;
+  const { mode, selectedId, currentStepIndex, activeItem, currentTask, currentLoopIndex, targetLoops, totalSteps, pendingSelectId } = session.state;
+
+  // Name exactly what's about to be lost - "are you sure?" alone tells you nothing.
+  const switchWarning = mode === "workflow"
+    ? `You're on step ${currentStepIndex + 1} of ${totalSteps}`
+      + (targetLoops > 1 ? `, cycle ${currentLoopIndex + 1} of ${targetLoops}` : "")
+      + ". Switching starts this workflow over from the beginning."
+    : "Your timer is still running. Switching discards it.";
 
 
   const loopControls = (
@@ -120,6 +137,28 @@ export default function Dashboard() {
           currentStepIndex={currentStepIndex}
         />
       </div>
+
+      {/* Only opens when there is genuinely progress to lose - see
+          hasProgressAtRisk in use-session.ts */}
+      <AlertDialog
+        open={pendingSelectId !== null}
+        onOpenChange={(open) => { if (!open) session.actions.cancelSwitch(); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to something else?</AlertDialogTitle>
+            <AlertDialogDescription>{switchWarning}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={session.actions.cancelSwitch}>
+              Keep going
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={session.actions.confirmSwitch}>
+              Switch anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

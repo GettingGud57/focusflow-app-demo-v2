@@ -225,38 +225,70 @@ export function useSession(tasks: any[], workflows: any[]) {
   // EXPOSE EVERYTHING THE DASHBOARD NEEDS HERE
   
   // ============================================================
-  // WRAPPED setSelectedId: Stop timer when switching tasks/workflows
+  // WRAPPED setSelectedId: Confirm before throwing away progress
   // ============================================================
-  // WHY: When user actively switches to a different task, they're saying
-  //      "I'm done with the previous one". Fresh state is more intuitive.
+  // WHY: Switching used to silently kill a running timer and reset the
+  //      workflow. Anything you'd be annoyed to lose gets a confirmation first.
   // NOTE: This does NOT affect page navigation - that restores from localStorage.
-  const handleSetSelectedId = (newId: string) => {
-    // If switching to a DIFFERENT task/workflow, stop any running timer
-    if (newId !== selectedId && activeTimer) {
+
+  // The pending id waits here while the user answers the dialog.
+  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null);
+
+  // Is there actually something to lose? A running timer, obviously - but also
+  // a workflow parked partway through, since step and loop position survive
+  // without a timer. Deliberately false when idle at the start: a dialog that
+  // fires with nothing at stake just teaches you to click through it.
+  const hasProgressAtRisk =
+    !!activeTimer ||
+    (mode === "workflow" && (currentStepIndex > 0 || currentLoopIndex > 0));
+
+  const commitSelection = (newId: string) => {
+    if (activeTimer) {
       stopTimer();
     }
     setSelectedId(newId);
+    setPendingSelectId(null);
+    // Step and loop reset happen in the sync effect above, which already owns
+    // that logic for a genuinely new selection.
   };
 
+  const handleSetSelectedId = (newId: string) => {
+    if (newId === selectedId) return; // re-picking the current item is a no-op
+    if (hasProgressAtRisk) {
+      setPendingSelectId(newId);
+      return;
+    }
+    commitSelection(newId);
+  };
+
+  const confirmSwitch = () => {
+    if (pendingSelectId !== null) commitSelection(pendingSelectId);
+  };
+
+  const cancelSwitch = () => setPendingSelectId(null);
+
   return {
-    state: { 
-      mode, 
-      selectedId, 
-      currentStepIndex, 
-      activeItem, 
+    state: {
+      mode,
+      selectedId,
+      currentStepIndex,
+      activeItem,
       currentTask,
       currentLoopIndex,
       targetLoops,
       flattenedTasks,  // Expose for SessionSidebar
       totalSteps,      // Expose total flattened steps count
+      pendingSelectId, // Non-null while the "are you sure?" dialog is open
 
     },
-    actions: { 
-      setMode, 
+    actions: {
+      setMode,
       setSelectedId: handleSetSelectedId, // Use wrapped version
       advance,
       // 👇 We add this so Dashboard can change them
-      adjustLoops 
+      adjustLoops,
+      confirmSwitch,
+      cancelSwitch
     },
   };
 }
