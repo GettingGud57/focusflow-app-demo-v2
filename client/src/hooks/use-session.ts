@@ -138,13 +138,20 @@ export function useSession(tasks: any[], workflows: any[]) {
   // 3. THE SYNC EFFECT (The "Photocopier")
   // When a user picks a NEW workflow (not restoring), load its default loop count.
   // Track the previous selectedId to detect actual changes.
-  const prevSelectedIdRef = useRef<string | null>(null);
-  
+  //
+  // Seeded from the restored session, NOT null. Starting at null meant a fresh
+  // mount treated every selection as "restoring", so the reset below was skipped
+  // and stale loop state from localStorage leaked into the new workflow (pick a
+  // workflow after visiting /workflows and it would show "cycle 2/2"). It also
+  // meant a workflow's own `loop` value was ignored on the first selection after
+  // any reload. Seeding it keeps the original intent - don't clobber progress on
+  // a reload - while still detecting a genuinely different workflow.
+  const prevSelectedIdRef = useRef<string | null>(savedSession?.selectedId ?? null);
+
   useEffect(() => {
     if (mode === "workflow" && activeItem) {
-      const isNewSelection = prevSelectedIdRef.current !== null && 
-                             prevSelectedIdRef.current !== activeItem.id;
-      
+      const isNewSelection = prevSelectedIdRef.current !== activeItem.id;
+
       if (isNewSelection) {
         // User switched to a DIFFERENT workflow - reset to its defaults
         setTargetLoops(activeItem.loop || 1);
