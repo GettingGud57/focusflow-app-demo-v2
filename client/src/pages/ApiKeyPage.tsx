@@ -1,5 +1,5 @@
-import { ApiKeyForm } from "@/components/SettingsDialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApiKeyForm } from "@/components/ApiKeyForm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ApiKeyPage() {
   return (
@@ -10,11 +10,10 @@ export default function ApiKeyPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>API Key</CardTitle>
-          <CardDescription>Keys stay in your browser. Clear to fall back to the project key.</CardDescription>
+          <CardTitle>Your key</CardTitle>
         </CardHeader>
         <CardContent>
-          <ApiKeyForm layout="page" />
+          <ApiKeyForm />
         </CardContent>
       </Card>
     </div>
