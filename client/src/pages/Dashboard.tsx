@@ -37,14 +37,19 @@ export default function Dashboard() {
   // 2. The Brain 🧠
   const session = useSession(tasks, workflows);
 
-  const { mode, selectedId, currentStepIndex, activeItem, currentTask, currentLoopIndex, targetLoops, totalSteps, pendingSelectId } = session.state;
+  const { mode, selectedId, currentStepIndex, activeItem, currentTask, currentLoopIndex, targetLoops, pendingSelectId, switchRisk } = session.state;
 
   // Name exactly what's about to be lost - "are you sure?" alone tells you nothing.
-  const switchWarning = mode === "workflow"
-    ? `You're on step ${currentStepIndex + 1} of ${totalSteps}`
-      + (targetLoops > 1 ? `, cycle ${currentLoopIndex + 1} of ${targetLoops}` : "")
-      + ". Switching starts this workflow over from the beginning."
-    : "Your timer is still running. Switching discards it.";
+  // Reads from switchRisk, not mode: mode has already flipped to the destination
+  // by the time this renders.
+  const riskName = switchRisk.title ? `"${switchRisk.title}"` : "this session";
+
+  const switchWarning =
+    switchRisk.kind === "workflow" && switchRisk.totalSteps > 0
+      ? `You're on step ${switchRisk.stepIndex + 1} of ${switchRisk.totalSteps}`
+        + (switchRisk.targetLoops > 1 ? `, cycle ${switchRisk.loopIndex + 1} of ${switchRisk.targetLoops}` : "")
+        + ` in ${riskName}. Switching starts it over from the beginning.`
+      : `${riskName} is still running. Switching discards the timer.`;
 
 
   const loopControls = (

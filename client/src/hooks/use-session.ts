@@ -234,13 +234,42 @@ export function useSession(tasks: any[], workflows: any[]) {
   // The pending id waits here while the user answers the dialog.
   const [pendingSelectId, setPendingSelectId] = useState<string | null>(null);
 
+  // Which list does the CURRENT selection actually live in? `mode` cannot answer
+  // this: switching tabs fires setMode before the new item is picked, so by the
+  // time we ask, mode already describes the destination rather than what's at
+  // risk. Looking selectedId up in both lists is stable across a tab change.
+  const selectedWorkflow = useMemo(
+    () => workflows?.find((w: any) => w.id === selectedId),
+    [workflows, selectedId]
+  );
+  const selectedTask = useMemo(
+    () => tasks?.find((t: any) => t.id === selectedId),
+    [tasks, selectedId]
+  );
+  // Step count of the selection itself, not of whatever the current mode shows.
+  const selectedWorkflowSteps = useMemo(
+    () => (selectedWorkflow ? flattenWorkflow(selectedWorkflow.id).length : 0),
+    [selectedWorkflow, flattenWorkflow]
+  );
+
   // Is there actually something to lose? A running timer, obviously - but also
   // a workflow parked partway through, since step and loop position survive
   // without a timer. Deliberately false when idle at the start: a dialog that
   // fires with nothing at stake just teaches you to click through it.
   const hasProgressAtRisk =
     !!activeTimer ||
-    (mode === "workflow" && (currentStepIndex > 0 || currentLoopIndex > 0));
+    (!!selectedWorkflow && (currentStepIndex > 0 || currentLoopIndex > 0));
+
+  // Structured so the Dashboard can word the warning; the hook stays out of copy.
+  const switchRisk = {
+    kind: selectedWorkflow ? ("workflow" as const) : ("task" as const),
+    title: selectedWorkflow?.title ?? selectedTask?.title,
+    stepIndex: currentStepIndex,
+    totalSteps: selectedWorkflowSteps,
+    loopIndex: currentLoopIndex,
+    targetLoops,
+    timerRunning: !!activeTimer,
+  };
 
   const commitSelection = (newId: string) => {
     if (activeTimer) {
@@ -279,6 +308,7 @@ export function useSession(tasks: any[], workflows: any[]) {
       flattenedTasks,  // Expose for SessionSidebar
       totalSteps,      // Expose total flattened steps count
       pendingSelectId, // Non-null while the "are you sure?" dialog is open
+      switchRisk,      // What that dialog is warning you about
 
     },
     actions: {
