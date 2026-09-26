@@ -99,10 +99,22 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   //A FSM , we have 4 states : idle, running, paused, completed
   // Use useEffect to manage the timer based on the current state and global timer status
 
-  // Reset completion flag only when TASK changes (not on every effect run)
+  // Reset the completion latch per RUN, not per task.
+  //
+  // Keying this on [taskId] alone was a stall: if two consecutive steps use the
+  // same task - the same 25m block twice to make 50 minutes, or two rest steps
+  // back to back - then taskId never changes, this effect never fires, and the
+  // latch stays closed from the previous step. The display looked completely
+  // healthy (activeTimer changed, so the countdown reset and ran normally) but
+  // onComplete() could never fire again: in flow mode the chain silently
+  // stalled, and in manual mode the Done button became a no-op.
+  //
+  // activeTimer.startTime is the run's identity - startTimer() stamps a fresh one
+  // every time, including the flow-mode hand-off - so this now resets whenever a
+  // new run begins, whether or not it's a different task.
   useEffect(() => {
     hasCompletedRef.current = false;
-  }, [taskId]);
+  }, [taskId, activeTimer?.startTime]);
 
 
 
@@ -130,6 +142,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
                 hasCompletedRef.current = true;
                 onComplete();
               }
+            
             } else {
               setState("overtime");
             }
