@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, KeyRound, Moon, Sun, Trash2, List } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Moon, Trash2, List, Volume2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,10 @@ export type SettingsDialogProps = {
   onOpenChange: (open: boolean) => void;
   onSelectAppearance: () => void;
   onSelectApi: () => void;
+  onSelectSoundSettings: () => void;
 };
 
-export function SettingsDialog({ open, onOpenChange, onSelectAppearance, onSelectApi }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, onSelectAppearance, onSelectApi, onSelectSoundSettings }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -33,6 +34,10 @@ export function SettingsDialog({ open, onOpenChange, onSelectAppearance, onSelec
             onOpenChange(false);
             onSelectApi();
           }}
+          onSelectSoundSettings={() => {
+            onOpenChange(false);
+            onSelectSoundSettings();
+          }}
         />
       </DialogContent>
     </Dialog>
@@ -42,9 +47,10 @@ export function SettingsDialog({ open, onOpenChange, onSelectAppearance, onSelec
 type SettingsMenuProps = {
   onSelectAppearance: () => void;
   onSelectApi: () => void;
+  onSelectSoundSettings: () => void;
 };
 
-function SettingsMenu({ onSelectAppearance, onSelectApi }: SettingsMenuProps) {
+function SettingsMenu({ onSelectAppearance, onSelectApi, onSelectSoundSettings }: SettingsMenuProps) {
   return (
     <div className="space-y-3">
       <Button variant="outline" className="w-full justify-between" onClick={onSelectAppearance}>
@@ -56,6 +62,12 @@ function SettingsMenu({ onSelectAppearance, onSelectApi }: SettingsMenuProps) {
       <Button variant="outline" className="w-full justify-between" onClick={onSelectApi}>
         <span className="flex items-center gap-2">
           <KeyRound className="h-4 w-4" /> API Key
+        </span>
+        <List className="h-4 w-4 text-muted-foreground" />
+      </Button>
+      <Button variant="outline" className="w-full justify-between" onClick={onSelectSoundSettings}>
+        <span className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4" /> Sound
         </span>
         <List className="h-4 w-4 text-muted-foreground" />
       </Button>

@@ -12,6 +12,7 @@ import WorkflowsPage from "@/pages/WorkflowsPage";
 import CalendarPage from "@/pages/CalendarPage";
 import AppearancePage from "@/pages/AppearancePage";
 import ApiKeyPage from "@/pages/ApiKeyPage";
+import SoundPage from "@/pages/SoundPage";
 import NotFound from "@/pages/not-found";
 import { DataProvider } from "@/components/data/context/DataContext";
 import { FloatingButton } from "./components/FloatingButton";
@@ -39,6 +40,7 @@ function Router() {
           <Route path="/calendar" component={CalendarPage} />
           <Route path="/appearance" component={AppearancePage} />
           <Route path="/api-key" component={ApiKeyPage} />
+          <Route path="/sound" component={SoundPage} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -54,6 +56,10 @@ function Router() {
         onSelectApi={() => {
           setIsSettingsOpen(false);
           setLocation("/api-key");
+        }}
+        onSelectSoundSettings={() => {
+          setIsSettingsOpen(false);
+          setLocation("/sound");
         }}
       />
     </div>

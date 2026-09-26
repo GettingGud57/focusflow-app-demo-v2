@@ -1,12 +1,22 @@
 // ============================================================
 // ALARM CUES
 // ============================================================
-// Tones are synthesised with Web Audio rather than played from files. No asset
-// to fetch, nothing to 404, no decode latency on the first beep, and a new cue
-// costs a frequency and a duration instead of a trip to a sample library.
+// Two kinds of cue live here:
 //
-// Audio is a nicety layered on top of the timer, so every call here is wrapped
-// defensively: a browser that refuses to play must never break the countdown.
+//   "synth" - tones generated with Web Audio. No asset to fetch, nothing to
+//             404, no decode latency, and a new one costs a frequency and a
+//             duration. These are the defaults because they cannot fail.
+//   "file"  - your own audio file from client/public/sounds/. See the note by
+//             TIME_UP_CUES for how to add one.
+//
+// Both play through the SAME AudioContext, which matters: an AudioContext can
+// only be unlocked from a user gesture, so routing files through it means one
+// unlock covers everything. Playing files via <audio> instead would need its
+// own separate unlock dance.
+//
+// Audio is a nicety layered on the timer, so every call here is defensive. A
+// browser that refuses to play, or a missing file, must never break the
+// countdown or throw into the interval.
 
 type Tone = {
   freq: number;      // Hz
@@ -15,15 +25,64 @@ type Tone = {
   volume: number;    // 0..1
 };
 
+type SynthCue = { id: string; label: string; kind: "synth"; tones: Tone[] };
+type FileCue = { id: string; label: string; kind: "file"; url: string; volume: number };
+export type Cue = SynthCue | FileCue;
+
+// ------------------------------------------------------------
+// Settings
+// ------------------------------------------------------------
+// Stored in localStorage and read at play time rather than passed down through
+// React. The alarm is a module singleton, so reading on demand means it always
+// sees current values with no plumbing, and the settings page only has to write.
+
+export type SoundSettings = {
+  enabled: boolean;
+  timeUpCue: string; // Cue id
+};
+
+export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
+  enabled: true, // sound on by default
+  timeUpCue: "beeps",
+};
+
+const SETTINGS_KEY = "myApp_sound";
+
+export function loadSoundSettings(): SoundSettings {
+  if (typeof window === "undefined") return DEFAULT_SOUND_SETTINGS;
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return DEFAULT_SOUND_SETTINGS;
+    // Spread over the defaults so a settings blob written by an older version
+    // still gets any newly added field.
+    return { ...DEFAULT_SOUND_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_SOUND_SETTINGS;
+  }
+}
+
+export function saveSoundSettings(settings: SoundSettings) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // Storage full or blocked. Settings just won't persist.
+  }
+}
+
+// ------------------------------------------------------------
+// Audio plumbing
+// ------------------------------------------------------------
+
 let ctx: AudioContext | null = null;
 
 /**
  * MUST be called from inside a user gesture handler.
  *
- * An AudioContext is created in the "suspended" state, and resume() is only
- * honoured while a gesture is being handled. Call it any later and playback
- * fails *silently* - no error, no sound. startTimer() is only ever reached from
- * a button press, which is why the unlock lives there.
+ * An AudioContext is created "suspended", and resume() is only honoured while a
+ * gesture is being handled. Call it any later and playback fails *silently* -
+ * no error, no sound. startTimer() is only ever reached from a button press,
+ * which is why the unlock lives there.
  */
 export function unlockAudio() {
   try {
@@ -34,6 +93,11 @@ export function unlockAudio() {
       ctx = new AC();
     }
     if (ctx.state === "suspended") void ctx.resume();
+
+    // Warm the selected file cue now, so the first alarm isn't waiting on a
+    // network fetch at the exact moment it's supposed to ring.
+    const selected = findCue(loadSoundSettings().timeUpCue);
+    if (selected?.kind === "file") void loadBuffer(selected.url);
   } catch {
     // No audio available. Not fatal.
   }
@@ -50,7 +114,7 @@ function playTone(startAt: number, tone: Tone) {
 
   // Ramp the gain in and out instead of switching it. Starting or stopping a
   // sine wave at full amplitude is a discontinuity, and a discontinuity is an
-  // audible click - which on a 4am alarm sounds like a bug.
+  // audible click - which on an alarm just sounds like a bug.
   gain.gain.setValueAtTime(0, startAt);
   gain.gain.linearRampToValueAtTime(tone.volume, startAt + 0.012);
   gain.gain.setValueAtTime(tone.volume, startAt + tone.duration - 0.03);
@@ -61,9 +125,9 @@ function playTone(startAt: number, tone: Tone) {
   osc.stop(startAt + tone.duration + 0.02);
 }
 
-function playPattern(tones: Tone[]) {
-  // state !== "running" means the unlock never happened (or was revoked), so
-  // scheduling would be a no-op anyway.
+function playTones(tones: Tone[]) {
+  // state !== "running" means the unlock never happened, so scheduling anything
+  // would be a no-op anyway.
   if (!ctx || ctx.state !== "running") return;
 
   let at = ctx.currentTime + 0.02;
@@ -71,6 +135,37 @@ function playPattern(tones: Tone[]) {
     playTone(at, tone);
     at += tone.duration + tone.gap;
   }
+}
+
+// Decoded audio, kept so a repeated cue doesn't re-fetch or re-decode.
+const bufferCache = new Map<string, AudioBuffer>();
+
+async function loadBuffer(url: string): Promise<AudioBuffer | null> {
+  if (!ctx) return null;
+
+  const cached = bufferCache.get(url);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null; // typo'd filename, most likely
+    const decoded = await ctx.decodeAudioData(await res.arrayBuffer());
+    bufferCache.set(url, decoded);
+    return decoded;
+  } catch {
+    return null; // unsupported codec, or the file isn't really audio
+  }
+}
+
+function playBuffer(buffer: AudioBuffer, volume: number) {
+  if (!ctx || ctx.state !== "running") return;
+
+  const src = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+  src.buffer = buffer;
+  src.connect(gain).connect(ctx.destination);
+  src.start();
 }
 
 function vibrate(pattern: number[]) {
@@ -83,38 +178,110 @@ function vibrate(pattern: number[]) {
 }
 
 // ------------------------------------------------------------
-// The cues
+// The cue library
 // ------------------------------------------------------------
 // Distinguishable by shape, not just pitch - you need to tell them apart with
 // earphones in and without looking.
 
-// Time's up: three even beeps then one higher, longer. Reads as "...and stop".
-const TIME_UP: Tone[] = [
+// Three even beeps then one higher and longer. Reads as "...and stop".
+const BEEPS: Tone[] = [
   { freq: 880, duration: 0.13, gap: 0.07, volume: 0.28 },
   { freq: 880, duration: 0.13, gap: 0.07, volume: 0.28 },
   { freq: 880, duration: 0.13, gap: 0.07, volume: 0.28 },
   { freq: 1318, duration: 0.34, gap: 0, volume: 0.3 },
 ];
 
-// Still in overtime: two quiet low blips. Deliberately unobtrusive - this one
-// repeats, so it has to be easy to ignore while you finish what you're doing.
+// A rising arpeggio. Gentler - for when an alarm would be jarring.
+const CHIME: Tone[] = [
+  { freq: 659, duration: 0.16, gap: 0.02, volume: 0.22 },
+  { freq: 880, duration: 0.16, gap: 0.02, volume: 0.22 },
+  { freq: 1047, duration: 0.45, gap: 0, volume: 0.24 },
+];
+
+// Six fast alternating beeps. Hard to sleep through, hard to mistake.
+const URGENT: Tone[] = Array.from({ length: 6 }, (_, i) => ({
+  freq: i % 2 === 0 ? 1047 : 784,
+  duration: 0.11,
+  gap: 0.05,
+  volume: 0.32,
+}));
+
+/**
+ * TO ADD YOUR OWN SOUND
+ *
+ *   1. Drop the file in client/public/sounds/  e.g. airhorn.mp3
+ *      (Anything under client/public/ is served from the root as-is, so
+ *       client/public/sounds/airhorn.mp3 is reachable at /sounds/airhorn.mp3.
+ *       Vite copies the folder into the build untouched - no import needed.)
+ *   2. Add a line below.
+ *   3. Keep it short (under ~2s) and use mp3 for the widest support.
+ *
+ * A missing or unplayable file falls back to BEEPS rather than going silent, so
+ * a typo costs you the wrong sound, not a missed alarm.
+ *
+ *   { id: "airhorn", label: "Airhorn", kind: "file", url: "/sounds/airhorn.mp3", volume: 0.5 },
+ */
+export const TIME_UP_CUES: Cue[] = [
+  { id: "beeps", label: "Beeps", kind: "synth", tones: BEEPS },
+  { id: "chime", label: "Chime", kind: "synth", tones: CHIME },
+  { id: "urgent", label: "Urgent", kind: "synth", tones: URGENT },
+];
+
+function findCue(id: string): Cue | undefined {
+  return TIME_UP_CUES.find((c) => c.id === id);
+}
+
+// Overtime reminder. Deliberately NOT user-selectable: this one repeats every
+// couple of minutes, so it has to stay easy to ignore. An airhorn on a loop
+// would be punishment.
 const REMINDER: Tone[] = [
   { freq: 587, duration: 0.09, gap: 0.11, volume: 0.13 },
   { freq: 587, duration: 0.09, gap: 0, volume: 0.13 },
 ];
+
+// ------------------------------------------------------------
+// Public API
+// ------------------------------------------------------------
+
+/** Play a cue by id, ignoring the on/off setting. For the settings preview. */
+export async function previewCue(id: string) {
+  unlockAudio(); // safe: only ever called from a click
+  await playCue(id);
+}
+
+async function playCue(id: string) {
+  const cue = findCue(id) ?? TIME_UP_CUES[0];
+
+  if (cue.kind === "synth") {
+    playTones(cue.tones);
+    return;
+  }
+
+  const buffer = await loadBuffer(cue.url);
+  if (buffer) {
+    playBuffer(buffer, cue.volume);
+  } else {
+    // Missing or unplayable file. Ring anyway - a broken sound choice should
+    // never mean a silent alarm.
+    playTones(BEEPS);
+  }
+}
 
 export const alarm = {
   unlock: unlockAudio,
 
   /** The planned duration just ran out. */
   timeUp() {
-    playPattern(TIME_UP);
+    const settings = loadSoundSettings();
+    if (!settings.enabled) return;
+    void playCue(settings.timeUpCue);
     vibrate([250, 110, 250, 110, 420]);
   },
 
-  /** You're still in overtime. Softer, and capped by the caller. */
+  /** Still in overtime. Softer, and capped by the caller. */
   reminder() {
-    playPattern(REMINDER);
+    if (!loadSoundSettings().enabled) return;
+    playTones(REMINDER);
     vibrate([110, 90, 110]);
   },
 };
