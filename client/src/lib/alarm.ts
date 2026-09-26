@@ -94,10 +94,16 @@ export function unlockAudio() {
     }
     if (ctx.state === "suspended") void ctx.resume();
 
-    // Warm the selected file cue now, so the first alarm isn't waiting on a
-    // network fetch at the exact moment it's supposed to ring.
+    // Warm every file cue that could fire during this run, so nothing is waiting
+    // on a fetch and a decode at the moment it's supposed to play. This is what
+    // caused the confusing ordering earlier: a file cue requested FIRST landed
+    // after a synthesised one requested second, because only the file had to
+    // load.
     const selected = findCue(loadSoundSettings().timeUpCue);
-    if (selected?.kind === "file") void loadBuffer(selected.url);
+    const warm = [selected, ...COMPLETION_CUES];
+    for (const cue of warm) {
+      if (cue?.kind === "file") void loadBuffer(cue.url);
+    }
   } catch {
     // No audio available. Not fatal.
   }
@@ -221,16 +227,31 @@ const URGENT: Tone[] = Array.from({ length: 6 }, (_, i) => ({
  *
  *   { id: "airhorn", label: "Airhorn", kind: "file", url: "/sounds/airhorn.mp3", volume: 0.5 },
  */
+/** Selectable in Settings -> Sound. Plays when a task's planned time runs out. */
 export const TIME_UP_CUES: Cue[] = [
   { id: "beeps", label: "Beeps", kind: "synth", tones: BEEPS },
   { id: "chime", label: "Chime", kind: "synth", tones: CHIME },
   { id: "urgent", label: "Urgent", kind: "synth", tones: URGENT },
-  { id: "yay", label: "Yay", kind: "file", url: "/sounds/YayFnaf.mp3", volume: 0.5 },
-  {id :"yipee",label : "Yipee", kind: "file", url: "/sounds/Yippee.mp3", volume: 0.5 }
 ];
 
+/**
+ * Celebrations. A SEPARATE list from TIME_UP_CUES on purpose - anything in that
+ * array shows up in the Sound settings picker as an alarm option, and "Yippee"
+ * is not an alarm.
+ *
+ * Fixed rather than user-selectable for now, same treatment as REMINDER. Making
+ * them configurable later is just two more fields on SoundSettings.
+ */
+const COMPLETION_CUES: Cue[] = [
+  { id: "yippee", label: "Yippee", kind: "file", url: "/sounds/Yippee.mp3", volume: 0.5 },
+  { id: "yay", label: "Yay", kind: "file", url: "/sounds/YayFnaf.mp3", volume: 0.5 },
+];
+
+const TASK_DONE_CUE = "yippee";
+const WORKFLOW_DONE_CUE = "yay";
+
 function findCue(id: string): Cue | undefined {
-  return TIME_UP_CUES.find((c) => c.id === id);
+  return TIME_UP_CUES.find((c) => c.id === id) ?? COMPLETION_CUES.find((c) => c.id === id);
 }
 
 // Overtime reminder. Deliberately NOT user-selectable: this one repeats every
@@ -248,11 +269,23 @@ const REMINDER: Tone[] = [
 /** Play a cue by id, ignoring the on/off setting. For the settings preview. */
 export async function previewCue(id: string) {
   unlockAudio(); // safe: only ever called from a click
-  await playCue(id);
+  await playCue(findCue(id), BEEPS);
 }
 
-async function playCue(id: string) {
-  const cue = findCue(id) ?? TIME_UP_CUES[0];
+/**
+ * The caller resolves the cue and decides what happens when it can't play.
+ *
+ * `fallback` is the point of this signature. An ALARM that fails must still make
+ * a noise - a missed deadline is worse than the wrong sound - so it passes
+ * BEEPS. A CELEBRATION that fails should stay quiet: falling back to BEEPS makes
+ * a broken congratulation sound exactly like a fresh alarm going off, which is
+ * how the FNAFYay.mp3 typo read as "the ringtone rang again".
+ */
+async function playCue(cue: Cue | undefined, fallback: Tone[] | null) {
+  if (!cue) {
+    if (fallback) playTones(fallback);
+    return;
+  }
 
   if (cue.kind === "synth") {
     playTones(cue.tones);
@@ -262,21 +295,19 @@ async function playCue(id: string) {
   const buffer = await loadBuffer(cue.url);
   if (buffer) {
     playBuffer(buffer, cue.volume);
-  } else {
-    // Missing or unplayable file. Ring anyway - a broken sound choice should
-    // never mean a silent alarm.
-    playTones(BEEPS);
+  } else if (fallback) {
+    playTones(fallback);
   }
 }
 
 export const alarm = {
   unlock: unlockAudio,
 
-  /** The planned duration just ran out. */
+  /** The planned duration just ran out. Falls back to BEEPS - never silent. */
   timeUp() {
     const settings = loadSoundSettings();
     if (!settings.enabled) return;
-    void playCue(settings.timeUpCue);
+    void playCue(findCue(settings.timeUpCue) ?? TIME_UP_CUES[0], BEEPS);
     vibrate([250, 110, 250, 110, 420]);
   },
 
@@ -286,21 +317,18 @@ export const alarm = {
     playTones(REMINDER);
     vibrate([110, 90, 110]);
   },
-  
-   congrats1(){
+
+  /** A standalone task finished. Silent if the file is missing. */
+  taskComplete() {
     if (!loadSoundSettings().enabled) return;
-    void playCue("yay");
+    void playCue(findCue(TASK_DONE_CUE), null);
     vibrate([110, 90, 110]);
+  },
 
-   },
-
-  congrats2(){
+  /** A whole workflow finished. Bigger buzz, since it's the bigger event. */
+  workflowComplete() {
     if (!loadSoundSettings().enabled) return;
-    void playCue("yipee");
-    vibrate([110, 90, 110]);
-
-   }
-
-
-
+    void playCue(findCue(WORKFLOW_DONE_CUE), null);
+    vibrate([160, 90, 160, 90, 280]);
+  },
 };

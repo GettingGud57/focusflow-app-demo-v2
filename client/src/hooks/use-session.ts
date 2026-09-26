@@ -178,7 +178,7 @@ export function useSession(tasks: any[], workflows: any[]) {
         spread: 80,
         origin: { y: 0.6 }
       });
-      alarm.congrats2();
+      alarm.taskComplete();
 
      return;
     } 
@@ -212,7 +212,7 @@ export function useSession(tasks: any[], workflows: any[]) {
               spread: 100,
               origin: { y: 0.6 }
             });
-             alarm.congrats1();
+             alarm.workflowComplete();
 
         }
     }
