@@ -288,18 +288,32 @@ export function useSession(tasks: any[], workflows: any[]) {
     timerRunning: !!activeTimer,
   };
 
+  // Re-picking the item you're already on means "start this over", not "no-op".
+  const pendingIsRestart = pendingSelectId !== null && pendingSelectId === selectedId;
+
   const commitSelection = (newId: string) => {
+    const isRestart = newId === selectedId;
+
     if (activeTimer) {
       stopTimer();
     }
+
+    if (isRestart) {
+      // The sync effect can't do this one: prevSelectedIdRef already points at
+      // this item, so re-picking it is correctly NOT a new selection. Same
+      // reason the workflow-finished branch resets explicitly.
+      setCurrentStepIndex(0);
+      setCurrentLoopIndex(0);
+      if (selectedWorkflow) setTargetLoops(selectedWorkflow.loop || 1);
+    }
+
     setSelectedId(newId);
     setPendingSelectId(null);
-    // Step and loop reset happen in the sync effect above, which already owns
-    // that logic for a genuinely new selection.
+    // For a genuinely NEW selection, step and loop reset happen in the sync
+    // effect above, which already owns that logic.
   };
 
   const handleSetSelectedId = (newId: string) => {
-    if (newId === selectedId) return; // re-picking the current item is a no-op
     if (hasProgressAtRisk) {
       setPendingSelectId(newId);
       return;
@@ -324,8 +338,9 @@ export function useSession(tasks: any[], workflows: any[]) {
       targetLoops,
       flattenedTasks,  // Expose for SessionSidebar
       totalSteps,      // Expose total flattened steps count
-      pendingSelectId, // Non-null while the "are you sure?" dialog is open
-      switchRisk,      // What that dialog is warning you about
+      pendingSelectId,  // Non-null while the "are you sure?" dialog is open
+      pendingIsRestart, // Same item re-picked, so it's a restart not a switch
+      switchRisk,       // What that dialog is warning you about
 
     },
     actions: {

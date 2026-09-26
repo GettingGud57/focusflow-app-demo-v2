@@ -37,19 +37,28 @@ export default function Dashboard() {
   // 2. The Brain 🧠
   const session = useSession(tasks, workflows);
 
-  const { mode, selectedId, currentStepIndex, activeItem, currentTask, currentLoopIndex, targetLoops, pendingSelectId, switchRisk } = session.state;
+  const { mode, selectedId, currentStepIndex, activeItem, currentTask, currentLoopIndex, targetLoops, pendingSelectId, pendingIsRestart, switchRisk } = session.state;
 
   // Name exactly what's about to be lost - "are you sure?" alone tells you nothing.
   // Reads from switchRisk, not mode: mode has already flipped to the destination
   // by the time this renders.
   const riskName = switchRisk.title ? `"${switchRisk.title}"` : "this session";
 
+  // Where you're going is the same item you're on, so the action is "restart",
+  // not "switch". Same guard, different consequence - say which one it is.
+  const switchTitle = pendingIsRestart ? "Start over?" : "Switch to something else?";
+  const switchConfirmLabel = pendingIsRestart ? "Start over" : "Switch anyway";
+
+  const consequence = pendingIsRestart
+    ? "Restarting takes you back to the first step."
+    : "Switching starts it over from the beginning.";
+
   const switchWarning =
     switchRisk.kind === "workflow" && switchRisk.totalSteps > 0
       ? `You're on step ${switchRisk.stepIndex + 1} of ${switchRisk.totalSteps}`
         + (switchRisk.targetLoops > 1 ? `, cycle ${switchRisk.loopIndex + 1} of ${switchRisk.targetLoops}` : "")
-        + ` in ${riskName}. Switching starts it over from the beginning.`
-      : `${riskName} is still running. Switching discards the timer.`;
+        + ` in ${riskName}. ${consequence}`
+      : `${riskName} is still running. ${pendingIsRestart ? "Restarting resets the timer." : "Switching discards the timer."}`;
 
 
   const loopControls = (
@@ -151,7 +160,7 @@ export default function Dashboard() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Switch to something else?</AlertDialogTitle>
+            <AlertDialogTitle>{switchTitle}</AlertDialogTitle>
             <AlertDialogDescription>{switchWarning}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -159,7 +168,7 @@ export default function Dashboard() {
               Keep going
             </AlertDialogCancel>
             <AlertDialogAction onClick={session.actions.confirmSwitch}>
-              Switch anyway
+              {switchConfirmLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
