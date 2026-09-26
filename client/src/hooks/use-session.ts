@@ -193,6 +193,13 @@ export function useSession(tasks: any[], workflows: any[]) {
         } else {
             toast({ title: "Workflow Finished!", description: "You are a machine." });
             stopTimer();
+            // A finished workflow must leave no progress behind, or re-selecting it
+            // resumes on the last step at the last cycle. The sync effect can't do
+            // this for us: prevSelectedIdRef still points at THIS workflow, so
+            // picking it again is correctly not a "new selection".
+            setCurrentStepIndex(0);
+            setCurrentLoopIndex(0);
+            setTargetLoops(activeItem.loop || 1); // discard any temporary extra cycles
             setSelectedId("");
             confetti({
               particleCount: 200,
