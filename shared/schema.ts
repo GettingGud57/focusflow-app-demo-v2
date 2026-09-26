@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -10,7 +10,13 @@ export const tasks = pgTable("tasks", {
   userId: text("user_id").notNull(), // which user owns this task
   title: text("title").notNull(),
   description: text("description"),
-  duration: integer("duration").notNull(), // in minutes
+  // Minutes, and deliberately NOT an integer. "Whole minutes only" was an
+  // arbitrary restriction on what is a quantity, not a count - and it made
+  // sub-minute durations impossible, which is why the -404 escape hatch in
+  // client/src/lib/schemas.ts existed. drizzle-zod turns integer() into
+  // number().int(), so 0.1 was rejected by the API with a 400 before it ever
+  // reached Postgres.
+  duration: real("duration").notNull(), // in minutes
   color: text("color").default("#3b82f6"),
 });
 
@@ -41,7 +47,10 @@ export const calendarEvents = pgTable("calendar_events", {
   userId: text("user_id").notNull(), // which user owns this event
   title: text("title").notNull(),
   startTime: timestamp("start_time").notNull(),
-  duration: integer("duration").notNull(), // in minutes
+  // real() for the same reason as tasks.duration: EventForm copies a task's
+  // duration straight in (and sums step durations for workflows), so an integer
+  // here would reject any event scheduled from a sub-minute task.
+  duration: real("duration").notNull(), // in minutes
   type: text("type").notNull(), // 'task' or 'workflow'
   referenceId: text("reference_id"), // plain text — can point to task or workflow id
   isCompleted: boolean("is_completed").default(false),
