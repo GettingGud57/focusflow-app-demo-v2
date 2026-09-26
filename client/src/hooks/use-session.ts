@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/components/data/context/DataContext";
 import confetti from "canvas-confetti";
+import { alarm } from "@/lib/alarm";
+
 
 type Mode = "single" | "workflow";
 
@@ -176,13 +178,16 @@ export function useSession(tasks: any[], workflows: any[]) {
         spread: 80,
         origin: { y: 0.6 }
       });
-      return;
+      alarm.congrats2();
+
+     return;
     } 
 
 
     if (currentStepIndex < flattenedTasks.length - 1) {
       stopTimer();
       setCurrentStepIndex(prev => prev + 1); 
+ 
     } else {
         // Check against our LOCAL target
         if (currentLoopIndex < targetLoops - 1) {
@@ -190,6 +195,7 @@ export function useSession(tasks: any[], workflows: any[]) {
             setCurrentLoopIndex(prev => prev + 1);
             setCurrentStepIndex(0);
             toast({ title: "Cycle Complete", description: `Starting cycle ${currentLoopIndex + 2} of ${targetLoops}` });
+ 
         } else {
             toast({ title: "Workflow Finished!", description: "You are a machine." });
             stopTimer();
@@ -206,6 +212,8 @@ export function useSession(tasks: any[], workflows: any[]) {
               spread: 100,
               origin: { y: 0.6 }
             });
+             alarm.congrats1();
+
         }
     }
   };

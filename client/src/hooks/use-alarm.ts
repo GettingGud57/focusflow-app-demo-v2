@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useData } from "@/components/data/context/DataContext";
+
 import { alarm } from "@/lib/alarm";
 
 // ============================================================
@@ -17,6 +18,8 @@ const MAX_REMINDERS = 5;
 
 export function useAlarm() {
   const { activeTimer } = useData();
+
+    
 
   // Identifies one specific run. Pausing and resuming calls startTimer again
   // with a fresh startTime, which moves the deadline - so a new key means
@@ -85,4 +88,10 @@ export function useAlarm() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [activeTimer]);
+
+
+
+  useEffect(() => {
+
+  }, []);
 }

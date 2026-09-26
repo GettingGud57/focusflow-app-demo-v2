@@ -225,6 +225,8 @@ export const TIME_UP_CUES: Cue[] = [
   { id: "beeps", label: "Beeps", kind: "synth", tones: BEEPS },
   { id: "chime", label: "Chime", kind: "synth", tones: CHIME },
   { id: "urgent", label: "Urgent", kind: "synth", tones: URGENT },
+  { id: "yay", label: "Yay", kind: "file", url: "/sounds/YayFnaf.mp3", volume: 0.5 },
+  {id :"yipee",label : "Yipee", kind: "file", url: "/sounds/Yippee.mp3", volume: 0.5 }
 ];
 
 function findCue(id: string): Cue | undefined {
@@ -284,4 +286,21 @@ export const alarm = {
     playTones(REMINDER);
     vibrate([110, 90, 110]);
   },
+  
+   congrats1(){
+    if (!loadSoundSettings().enabled) return;
+    void playCue("yay");
+    vibrate([110, 90, 110]);
+
+   },
+
+  congrats2(){
+    if (!loadSoundSettings().enabled) return;
+    void playCue("yipee");
+    vibrate([110, 90, 110]);
+
+   }
+
+
+
 };
