@@ -1,12 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
+import { Play, Pause, RotateCcw, SkipForward, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useData } from "@/components/data/context/DataContext";
 
 
-type TimerState = "idle" | "running" | "paused" | "completed";
+// "overtime" = past the planned duration, counting up, waiting for the user to
+// decide. It runs indefinitely on purpose: the app signals the boundary, it
+// never decides on your behalf.
+type TimerState = "idle" | "running" | "paused" | "overtime" | "completed";
 
 interface TimerDisplayProps {
   taskId: string; // Requires taskId to connect with global state
@@ -35,7 +38,8 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
         const now = Date.now();
         const secondsPassed = Math.floor((now - activeTimer.startTime) / 1000);
         const totalSeconds = activeTimer.totalDuration * 60; // Convert minutes to seconds
-        return Math.max(0, totalSeconds - secondsPassed);
+        // NOT clamped at 0 - a negative value is overtime, and that's real data
+        return totalSeconds - secondsPassed;
     }
     return null;
 
@@ -53,7 +57,11 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   const getInitialState = (): TimerState => {
      const remainingSeconds = getRemainingSeconds();
     if (remainingSeconds !== null) {
-      return "running";
+      // Restore straight into "overtime" if the deadline already passed while
+      // the app was closed. Starting as "running" would make the interval see a
+      // running -> overtime transition and fire a cue for an event that happened
+      // hours ago.
+      return remainingSeconds > 0 ? "running" : "overtime";
     }
     return "idle";
   };
@@ -100,7 +108,9 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
 
 
   useEffect(() => {
-    if (state === "running" && isGloballyRunning && activeTimer) {
+    // One interval covers both running and overtime - the logic is identical,
+    // it just reads the clock. The only extra job is catching the crossing.
+    if ((state === "running" || state === "overtime") && isGloballyRunning && activeTimer) {
       // Use global timer for accurate time tracking
       intervalRef.current = setInterval(() => {
 
@@ -108,6 +118,12 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
 
         if(remaining !== null){
           setTimeLeft(remaining);
+
+          // The state transition is its own latch: once we're in "overtime"
+          // this branch can't run again, so the crossing fires exactly once.
+          if (remaining <= 0 && state === "running") {
+            setState("overtime");
+          }
         }
 
 
@@ -149,14 +165,34 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
     stopTimer();
   };
 
+  // Overtime: the user decided they're finished. This is the only thing that
+  // advances the workflow now - nothing happens on a timeout.
+  const handleDone = () => {
+    if (hasCompletedRef.current) return; // guard against a double tap
+    hasCompletedRef.current = true;
+    setState("completed");
+    stopTimer();
+    onComplete();
+  };
+
+  const isOvertime = state === "overtime";
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    // Math.abs because overtime is negative, and -142 % 60 is -22
+    const abs = Math.abs(seconds);
+    const hrs = Math.floor(abs / 3600);
+    const mins = Math.floor((abs % 3600) / 60);
+    const secs = abs % 60;
+    // An hours branch, or 8 hours of overtime renders as "483:12"
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const progress = (timeLeft / (durationMinutes * 60)) * 100;
+  // Clamped at 0 - negative progress would push strokeDashoffset past the
+  // circumference and the ring would render wrong.
+  const progress = Math.max(0, (timeLeft / (durationMinutes * 60)) * 100);
 
   return (
     <div className="flex flex-col items-center justify-center p-8 w-full max-w-xl mx-auto min-h-[600px]">
@@ -195,8 +231,8 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
             {/* Colored Timer Ring */}
             <circle
               cx="50%" cy="50%" r={radius}
-              // Color logic: Green if done, Orange/Custom if running
-              stroke={state === "completed" ? "#22c55e" : color}
+              // Color logic: Yellow past the line, Green if done, Orange/Custom if running
+              stroke={isOvertime ? "#eab308" : state === "completed" ? "#22c55e" : color}
               className="fill-none stroke-[8px] transition-all duration-1000 ease-linear"
               style={{
                 strokeDasharray: circumference,
@@ -218,26 +254,69 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
             key={state}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-display font-bold tabular-nums text-7xl md:text-8xl tracking-tighter"
+            className={cn(
+              "font-display font-bold tabular-nums text-7xl md:text-8xl tracking-tighter",
+              isOvertime && "text-yellow-500"
+            )}
           >
-            {formatTime(timeLeft)}
+            {/* "+" not "-": you're accumulating extra time, not running a deficit */}
+            {isOvertime ? `+${formatTime(timeLeft)}` : formatTime(timeLeft)}
           </motion.div>
 
           <p className="mt-2 text-muted-foreground font-medium uppercase tracking-widest text-sm">
-            {state === "completed" ? "Done!" : "Remaining"}
+            {isOvertime ? "Overtime" : state === "completed" ? "Done!" : "Remaining"}
           </p>
         </div>
       </div>
 
-      <div className="mt-12 w-full">
+      <div className="mt-12 w-full flex flex-col items-center gap-6">
+        {/* Keys matter: mode="wait" tracks children by key, and without them
+            React reconciles the two branches as the same element and the exit
+            animation never plays. */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key="controls"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center gap-6"
-          >
-            <div className="flex items-center justify-center gap-6">
+          {isOvertime ? (
+            /* Overtime: Done and Reset only.
+               No Pause - there's no countdown left to preserve.
+               No Skip  - you overshot the duration, so "I didn't do it" is
+                          dishonest. Reset is the abandon path. */
+            <motion.div
+              key="overtime"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex flex-col items-center gap-4"
+            >
+              <p className="text-yellow-600 font-semibold">Time's up — finish when you're ready.</p>
+              <div className="flex items-center justify-center gap-6">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={resetTimer}
+                  className="w-14 h-14 rounded-full border-2 hover:bg-muted"
+                >
+                  <RotateCcw className="w-6 h-6 text-muted-foreground" />
+                </Button>
+
+                <Button
+                  size="icon"
+                  onClick={handleDone}
+                  style={{ backgroundColor: "#22c55e" }}
+                  className="w-20 h-20 rounded-full shadow-xl shadow-black/10 transition-transform hover:scale-105 active:scale-95"
+                >
+                  <Check className="w-8 h-8 text-white" />
+                </Button>
+
+                <div className="w-14 h-14" />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="controls"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex items-center justify-center gap-6"
+            >
               <Button
                 variant="outline"
                 size="icon"
@@ -275,16 +354,16 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
               ) : (
                 <div className="w-14 h-14" />
               )}
-            </div>
-            {footer && (
-            <div className="mt-4 animate-in fade-in slide-in-from-bottom-2">
-              {footer}
-            </div>
-            )}
-
-
-          </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
+
+        {/* Outside AnimatePresence so it isn't duplicated in both branches */}
+        {footer && (
+          <div className="animate-in fade-in slide-in-from-bottom-2">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
