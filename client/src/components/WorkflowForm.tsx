@@ -17,6 +17,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {  WorkflowFormSchema } from '@/lib/schemas';
+import { newId } from "@/lib/newId";
 
 
 
@@ -84,7 +85,7 @@ useEffect(() => {
       const restoredSteps = existingData.steps.map((step: any) => {
          const isTask = step.stepType === 'task';
          return{
-           id: crypto.randomUUID(),
+           id: newId(),
            stepType: step.stepType,
           taskId: step.taskId,
           workflowId: step.workflowId,
@@ -116,7 +117,7 @@ useEffect(() => {
 
     // 'append' automatically updates the form state AND the UI array
     append({
-      id: crypto.randomUUID(),
+      id: newId(),
       stepType: "task",
       taskId: task.id,
       task: task 
@@ -161,7 +162,7 @@ useEffect(() => {
     }
 
     append({
-      id: crypto.randomUUID(),
+      id: newId(),
       stepType: "workflow",
       workflowId: workflow.id,
       workflow: workflow

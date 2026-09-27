@@ -13,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 // Lazy-load `generateProductivityPlan` at call time to avoid bundling server-only
 // dependencies (like the OpenAI SDK) during HMR.
 import { useEffect, useRef, useState } from "react";
+import { newId } from "@/lib/newId";
 
 
 
@@ -130,7 +131,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
 
       if (response.data.newTasks && response.data.newTasks.length > 0) {
         response.data.newTasks.forEach((task: any) => {
-          const newTaskId = crypto.randomUUID();
+          const newTaskId = newId();
           const realTask = {
             ...task,
             id: newTaskId,
@@ -151,7 +152,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
         const idMap: Record<string, string> = {};
         
         const workflowsWithRealIds = response.data.newWorkflows.map((wf: any) => {
-          const realId = crypto.randomUUID();
+          const realId = newId();
           if (wf.id) idMap[wf.id] = realId;
           return { ...wf, realId };
         });
@@ -171,14 +172,14 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
                   if (existingTask) {
                     // ✅ Task already exists from top-level, just reference it
                     workflowSteps.push({
-                      id: crypto.randomUUID(),
+                      id: newId(),
                       stepType: 'task' as const,
                       taskId: existingTask.id,
                       order: index,
                     });
                   } else {
                     // 🆕 Genuinely new inline task, create it
-                    const newTaskId = crypto.randomUUID();
+                    const newTaskId = newId();
                     const realTask = {
                       ...step.task,
                       id: newTaskId,
@@ -187,7 +188,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
                     };
                     allNewTasks.push(realTask);
                     workflowSteps.push({
-                      id: crypto.randomUUID(),
+                      id: newId(),
                       stepType: 'task' as const,
                       taskId: newTaskId,
                       order: index,
@@ -197,7 +198,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
                   // Case 2: Reference to a task — check taskIdMap first (top-level tasks)
                   const resolvedTaskId = taskIdMap[step.taskId] || step.taskId;
                   workflowSteps.push({
-                    id: crypto.randomUUID(),
+                    id: newId(),
                     stepType: 'task' as const,
                     taskId: resolvedTaskId,
                     order: index,
@@ -207,7 +208,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
                 // Case 3: Reference workflow — REMAP the ID if it was created in this batch
                 const resolvedId = idMap[step.workflowId] || step.workflowId;
                 workflowSteps.push({
-                  id: crypto.randomUUID(),
+                  id: newId(),
                   stepType: 'workflow' as const,
                   workflowId: resolvedId,
                   order: index,
@@ -235,7 +236,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
         proposeChanges({
           tasks: allNewTasks,
           workflows: allNewWorkflows,
-          events: (response.data.newEvents || []).map((event: any) => ({ ...event, id: crypto.randomUUID() }))
+          events: (response.data.newEvents || []).map((event: any) => ({ ...event, id: newId() }))
         });
         console.log("Proposed Changes:", {
           tasks: allNewTasks,
