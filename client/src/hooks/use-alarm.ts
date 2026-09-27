@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useData } from "@/components/data/context/DataContext";
 
 import { alarm } from "@/lib/alarm";
+import { reportExactAlarmSetting } from "@/lib/nativeAlarm";
 
 // ============================================================
 // USE ALARM
@@ -18,6 +19,11 @@ const MAX_REMINDERS = 5;
 
 export function useAlarm() {
   const { activeTimer, autoAdvance } = useData();
+
+  // Native only. If the user has turned exact alarms off, scheduled
+  // notifications get batched or dropped - so a silent timer is expected
+  // rather than broken, and it should be visible in the log.
+  useEffect(() => { void reportExactAlarmSetting(); }, []);
 
   // Identifies one specific run. Pausing and resuming calls startTimer again
   // with a fresh startTime, which moves the deadline - so a new key means

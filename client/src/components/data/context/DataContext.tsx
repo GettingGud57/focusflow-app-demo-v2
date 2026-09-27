@@ -5,6 +5,7 @@ import { useWorkflows, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow }
 import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent } from '@/hooks/use-calendar';
 import { api } from '@shared/routes';
 import { unlockAudio } from '@/lib/alarm';
+import { scheduleTimerDone, cancelTimerDone } from '@/lib/nativeAlarm';
 import { useConversations, useCreateConversation, useUpdateConversation, useDeleteConversation } from '@/hooks/use-conversations';
 import type { Conversation } from '@shared/schema';
 
@@ -550,10 +551,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // from inside a user gesture. Do it anywhere else and the alarm silently
     // never plays. See client/src/lib/alarm.ts
     unlockAudio();
-    setActiveTimer({ taskId, startTime: Date.now(), totalDuration: duration });
+
+    const startTime = Date.now();
+    setActiveTimer({ taskId, startTime, totalDuration: duration });
+
+    // Hand the same deadline to Android's alarm system. No-op on web. This is
+    // what rings when the WebView has been frozen or the app closed entirely -
+    // the in-page interval in use-alarm.ts only survives while the page runs.
+    void scheduleTimerDone(
+      getTaskById(taskId)?.title ?? "Your task",
+      new Date(startTime + duration * 60 * 1000),
+    );
   };
 
-  const stopTimer = () => setActiveTimer(null);
+  const stopTimer = () => {
+    setActiveTimer(null);
+    // Stopped, paused, reset or completed - either way the pending OS alarm is
+    // now wrong and must go, or it fires for a timer that no longer exists.
+    void cancelTimerDone();
+  };
 
 
   // ============================================================

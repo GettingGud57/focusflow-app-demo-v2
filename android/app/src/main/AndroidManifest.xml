@@ -38,4 +38,15 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android 14+. SCHEDULE_EXACT_ALARM (merged in from the
+         local-notifications plugin's own manifest) can be switched off by the
+         user in app settings, and the plugin docs say that deletes any already
+         scheduled exact alarms. USE_EXACT_ALARM is auto-granted and not
+         revocable.
+
+         Google restricts it to apps where exact alarms are core functionality -
+         alarm clocks, timers, calendars. A focus timer qualifies, and this build
+         is sideloaded anyway, so there is no Play policy exposure. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 </manifest>
