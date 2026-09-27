@@ -232,7 +232,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
         )}
       </div>
 
-      <div className="relative w-72 h-72 md:w-96 md:h-96 flex items-center justify-center">
+      <div className="relative w-full max-w-[18rem] md:max-w-[24rem] aspect-square flex items-center justify-center">
         {/* Background Ring */}
 
 
@@ -281,19 +281,33 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
 
 
         {/* Center Content */}
-        <div className="relative z-10 flex flex-col items-center text-center">
-          <motion.div
-            key={state}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-              "font-display font-bold tabular-nums text-7xl md:text-8xl tracking-tighter",
-              isOvertime && "text-yellow-500"
-            )}
-          >
-            {/* "+" not "-": you're accumulating extra time, not running a deficit */}
-            {isOvertime ? `+${formatTime(timeLeft)}` : formatTime(timeLeft)}
-          </motion.div>
+        <div className="relative z-10 flex flex-col items-center text-center px-4">
+          {(() => {
+            // "+" not "-": you're accumulating extra time, not running a deficit
+            const display = isOvertime
+              ? `+${formatTime(timeLeft)}`
+              : formatTime(timeLeft);
+
+            // Step the size down once the string grows past "MM:SS". An hour of
+            // overtime reads "+1:00:00" - eight glyphs, which at text-7xl is
+            // wider than the ring on a phone.
+            const isLong = display.length > 6;
+
+            return (
+              <motion.div
+                key={state}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  "font-display font-bold tabular-nums tracking-tighter",
+                  isLong ? "text-5xl md:text-7xl" : "text-7xl md:text-8xl",
+                  isOvertime && "text-yellow-500"
+                )}
+              >
+                {display}
+              </motion.div>
+            );
+          })()}
 
           <p className="mt-2 text-muted-foreground font-medium uppercase tracking-widest text-sm">
             {isOvertime ? "Overtime" : state === "completed" ? "Done!" : "Remaining"}

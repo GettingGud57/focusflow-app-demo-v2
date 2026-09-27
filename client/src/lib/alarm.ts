@@ -308,8 +308,17 @@ async function playCue(cue: Cue | undefined, fallback: Tone[] | null) {
   const buffer = await loadBuffer(cue.url);
   if (buffer) {
     playBuffer(buffer, cue.volume);
-  } else if (fallback) {
-    playTones(fallback);
+  } else {
+    // A silent fallback must not be a SILENT failure. Without this, a 404, a
+    // codec the browser won't decode, or a suspended context are all
+    // indistinguishable from "sound is turned off" - which is exactly how the
+    // FNAFYay.mp3 typo went unnoticed.
+    console.warn(
+      `[alarm] cue "${cue.id}" could not play (${cue.url}). ` +
+      `Either the file is missing, the browser can't decode it, or audio was ` +
+      `never unlocked by a user gesture.`
+    );
+    if (fallback) playTones(fallback);
   }
 }
 
