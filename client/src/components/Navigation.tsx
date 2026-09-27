@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { LayoutGrid, CheckSquare, Calendar as CalendarIcon, Clock, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 type NavigationProps = {
   onOpenSettings?: () => void;
@@ -47,14 +46,14 @@ export function Navigation({ onOpenSettings }: NavigationProps) {
           })}
         </div>
         <div className="w-auto shrink-0 ml-auto md:ml-0 md:w-full pt-0 md:pt-4 md:mt-auto border-t-0 md:border-t-0 border-border/50">
-          <Button 
-            variant="ghost" 
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 w-full justify-center md:justify-start text-muted-foreground hover:bg-muted/50 hover:text-foreground h-auto font-normal"
+          <button
+            type="button"
             onClick={onOpenSettings}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 w-full text-muted-foreground hover:bg-muted/50 hover:text-foreground"
           >
             <Settings className="w-5 h-5" />
             <span className="hidden md:block">Settings</span>
-          </Button>
+          </button>
         </div>
       </div>
     </nav>

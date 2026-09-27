@@ -340,7 +340,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
                   onClick={resetTimer}
                   className="w-14 h-14 rounded-full border-2 hover:bg-muted"
                 >
-                  <RotateCcw className="w-6 h-6 text-muted-foreground" />
+                  <RotateCcw className="!w-6 !h-6 text-muted-foreground" />
                 </Button>
 
                 <Button
@@ -349,7 +349,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
                   style={{ backgroundColor: "#22c55e" }}
                   className="w-20 h-20 rounded-full shadow-xl shadow-black/10 transition-transform hover:scale-105 active:scale-95"
                 >
-                  <Check className="w-8 h-8 text-white" />
+                  <Check className="!w-8 !h-8 text-white" />
                 </Button>
 
                 <div className="w-14 h-14" />
@@ -369,7 +369,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
                 onClick={resetTimer}
                 className="w-14 h-14 rounded-full border-2 hover:bg-muted"
               >
-                <RotateCcw className="w-6 h-6 text-muted-foreground" />
+                <RotateCcw className="!w-6 !h-6 text-muted-foreground" />
               </Button>
 
               <Button
@@ -382,9 +382,9 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
                 )}
               >
                 {state === "running" ? (
-                  <Pause className="w-8 h-8 text-white fill-current" />
+                  <Pause className="!w-8 !h-8 text-white fill-current" />
                 ) : (
-                  <Play className="w-8 h-8 text-white fill-current ml-1" />
+                  <Play className="!w-8 !h-8 text-white fill-current ml-1" />
                 )}
               </Button>
 
@@ -395,7 +395,7 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
                   onClick={onSkip}
                   className="w-14 h-14 rounded-full border-2 hover:bg-muted"
                 >
-                  <SkipForward className="w-6 h-6 text-muted-foreground" />
+                  <SkipForward className="!w-6 !h-6 text-muted-foreground" />
                 </Button>
               ) : (
                 <div className="w-14 h-14" />
