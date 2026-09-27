@@ -260,8 +260,8 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
   return (
     <div 
       className={cn(
-        "border-l bg-background flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:sticky right-0 top-0 z-40",
-        shouldShow ? "w-96 md:w-[400px] opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none"
+        "border-l bg-background flex flex-col transition-all duration-300 ease-in-out h-dvh fixed md:sticky right-0 top-0 z-40",
+        shouldShow ? "w-full md:w-[400px] opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none"
       )}
     >
       {/* HEADER */}

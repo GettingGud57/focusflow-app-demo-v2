@@ -191,12 +191,14 @@ export function useSession(tasks: any[], workflows: any[]) {
       if (autoAdvance && task) startTimer(task.id, task.duration);
       else stopTimer();
     };
+   
+
 
     if (currentStepIndex < flattenedTasks.length - 1) {
       const nextIndex = currentStepIndex + 1;
       setCurrentStepIndex(nextIndex);
       handOffTo(flattenedTasks[nextIndex]);
-
+     
     } else {
         // Check against our LOCAL target
         if (currentLoopIndex < targetLoops - 1) {

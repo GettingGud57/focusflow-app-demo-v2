@@ -31,9 +31,9 @@ function Router() {
   useAlarm();
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
+    <div className="flex flex-col md:flex-row min-h-dvh bg-background text-foreground">
       <Navigation onOpenSettings={() => setIsSettingsOpen(true)} />
-      <main className="flex-1 pb-20 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-y-auto overflow-x-hidden">
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/tasks" component={TasksPage} />

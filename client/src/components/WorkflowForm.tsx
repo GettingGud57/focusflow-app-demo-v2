@@ -171,7 +171,16 @@ useEffect(() => {
 
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // On touch, a bare PointerSensor claims the gesture on pointerdown - so
+    // trying to SCROLL the step list starts dragging a step instead, which makes
+    // the list unusable on a phone.
+    //
+    // delay: a quick swipe scrolls, a press-and-hold drags.
+    // tolerance: how far your finger may drift during that delay before it's
+    // treated as a scroll rather than a hold. Fingers are never still.
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 220, tolerance: 6 },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 

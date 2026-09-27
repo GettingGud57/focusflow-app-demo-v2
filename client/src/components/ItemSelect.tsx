@@ -35,7 +35,19 @@ export function ItemSelect({
           <div className="p-2 text-sm text-center text-muted-foreground">{emptyText}</div>
         ) : (
           items.map((item) => (
-            <SelectItem key={item.id} value={item.id}>
+            <SelectItem
+              key={item.id}
+              value={item.id}
+              /* Radix only fires onValueChange when the value actually CHANGES,
+                 so re-picking the item you're already on is silent. The click
+                 still happens though, so catch it here and forward it -- that's
+                 what makes "select the current workflow again" mean "restart".
+                 Guarded to the selected item only, or every real change would
+                 fire twice. */
+              onPointerUp={() => {
+                if (item.id === value) onValueChange(item.id);
+              }}
+            >
               <div className="flex items-center gap-2">
                 {/* Only render the color dot if a color exists */}
                 {item.color && (

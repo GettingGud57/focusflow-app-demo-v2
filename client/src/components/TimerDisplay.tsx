@@ -217,8 +217,12 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   // circumference and the ring would render wrong.
   const progress = Math.max(0, (timeLeft / (durationMinutes * 60)) * 100);
 
+  // Tighter padding and min-height on mobile below: with p-8 and 600px the ring,
+  // title and controls don't fit above the bottom nav on a short phone, so the
+  // whole timer scrolled.
+
   return (
-    <div className="flex flex-col items-center justify-center p-8 w-full max-w-xl mx-auto min-h-[600px]">
+    <div className="flex flex-col items-center justify-center p-4 md:p-8 w-full max-w-xl mx-auto min-h-[480px] md:min-h-[600px]">
       <div className="mb-8 text-center space-y-1">
         <h2 className="text-2xl font-bold tracking-tight">{taskTitle}</h2>
         {taskDescription && (
@@ -243,8 +247,13 @@ export function TimerDisplay({ taskId, durationMinutes, taskTitle, taskDescripti
   // When progress is 0% (Empty), offset is circumference (Hide all)
         const strokeDashoffset = circumference - (progress / 100) * circumference;
 
+        // viewBox matters here. Without one, SVG user units are CSS pixels - so
+        // with radius 150 the ring spans 300px plus 8px of stroke, inside a w-72
+        // (288px) container on mobile. It was clipped on every phone, and only fit
+        // at md: where the container becomes 384px. With a viewBox the coordinates
+        // are relative and the whole ring scales to whatever the container is.
         return (
-          <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+          <svg viewBox="0 0 320 320" className="absolute inset-0 w-full h-full transform -rotate-90">
             {/* Grey Background Track */}
             <circle
               cx="50%" cy="50%" r={radius}

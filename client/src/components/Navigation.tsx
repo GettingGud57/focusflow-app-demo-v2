@@ -18,7 +18,7 @@ export function Navigation({ onOpenSettings }: NavigationProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:sticky md:top-0 md:h-screen md:w-64 md:flex-shrink-0 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t md:border-t-0 md:border-r border-border/50">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)] md:pb-0 md:sticky md:top-0 md:h-dvh md:w-64 md:flex-shrink-0 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t md:border-t-0 md:border-r border-border/50">
       <div className="flex md:flex-col h-full w-full items-center md:items-start p-2 md:p-6 gap-2 md:gap-4 justify-around md:justify-between">
         <div className="hidden md:flex items-center gap-3 mb-8 px-2">
           <img src="/fffavicon.png" alt="FocusFlow" className="w-8 h-8 rounded-lg object-cover" />

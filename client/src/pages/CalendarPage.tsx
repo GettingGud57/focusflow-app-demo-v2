@@ -49,7 +49,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto h-[calc(100vh-theme(spacing.20))] flex flex-col">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto h-[calc(100dvh-theme(spacing.20))] flex flex-col">
       {/* Header Controls */}
       <div className="flex justify-between mb-8">
          <h1 className="text-3xl font-bold">Schedule</h1>
