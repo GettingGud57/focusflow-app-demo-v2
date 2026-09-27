@@ -267,7 +267,7 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
         // covered the input row and paperclip on mobile, which is why they were
         // invisible. On mobile this panel is full-screen, so covering the nav is
         // correct anyway - the X closes it.
-        "border-l bg-background flex flex-col transition-all duration-300 ease-in-out h-dvh fixed md:sticky right-0 top-0 z-[60] md:z-40",
+        "border-l bg-background flex flex-col transition-all duration-300 ease-in-out h-dvh pt-[env(safe-area-inset-top)] md:pt-0 fixed md:sticky right-0 top-0 z-[60] md:z-40",
         shouldShow ? "w-full md:w-[400px] opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none"
       )}
     >

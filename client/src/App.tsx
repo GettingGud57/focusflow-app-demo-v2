@@ -33,7 +33,7 @@ function Router() {
   return (
     <div className="flex flex-col md:flex-row min-h-dvh bg-background text-foreground">
       <Navigation onOpenSettings={() => setIsSettingsOpen(true)} />
-      <main className="flex-1 pb-[calc(5rem_+_env(safe-area-inset-bottom))] md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 pt-[env(safe-area-inset-top)] md:pt-0 pb-[calc(5rem_+_env(safe-area-inset-bottom))] md:pb-0 overflow-y-auto overflow-x-hidden">
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/tasks" component={TasksPage} />

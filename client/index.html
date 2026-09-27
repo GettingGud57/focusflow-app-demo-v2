@@ -7,6 +7,17 @@
          maximum-scale=1 removed: it blocks pinch-zoom, which is an
          accessibility problem and something both platforms discourage. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Tints the browser/system UI around the page, and it's the ONLY control a
+         web page has over it. Two tags with media queries so it tracks the
+         device's light/dark setting.
+
+         Caveat worth knowing: in a normal Chrome tab this only affects Chrome's
+         own toolbar - the status bar icons (clock, wifi, battery) belong to
+         Android and a web page cannot restyle them. Installed/standalone and the
+         Capacitor WebView honour it much more. For real control of the icon
+         colour in the native app you need @capacitor/status-bar. -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <title>FocusFlow</title>
     <link rel="icon" type="image/png" href="/fffavicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
