@@ -1,12 +1,13 @@
 
 import {
-  tasks, workflows, workflowSteps, calendarEvents,
+  tasks, workflows, workflowSteps, calendarEvents, conversations,
   type Task, type InsertTask, type UpdateTaskRequest,
   type Workflow, type InsertWorkflow, type UpdateWorkflowRequest, type WorkflowWithSteps,
-  type CalendarEvent, type InsertCalendarEvent, type UpdateCalendarEventRequest
+  type CalendarEvent, type InsertCalendarEvent, type UpdateCalendarEventRequest,
+  type Conversation, type InsertConversation, type UpdateConversationRequest
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
  
 // Temporary default userId until auth is implemented
@@ -27,6 +28,13 @@ export interface IStorage {
   updateWorkflow(id: string, workflow: UpdateWorkflowRequest): Promise<WorkflowWithSteps>;
   deleteWorkflow(id: string): Promise<void>;
  
+  // Conversations (AI chat history)
+  getConversations(): Promise<Conversation[]>;
+  getConversation(id: string): Promise<Conversation | undefined>;
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  updateConversation(id: string, conversation: UpdateConversationRequest): Promise<Conversation>;
+  deleteConversation(id: string): Promise<void>;
+
   // Calendar
   getCalendarEvents(): Promise<CalendarEvent[]>;
   createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
@@ -174,6 +182,39 @@ export class DatabaseStorage implements IStorage {
  
   async deleteCalendarEvent(id: string): Promise<void> {
     await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
+  }
+  // Conversations (AI chat history)
+  async getConversations(): Promise<Conversation[]> {
+    // Most recently touched first - that's the only order a history list wants.
+    return await db.select().from(conversations).orderBy(desc(conversations.updatedAt));
+  }
+
+  async getConversation(id: string): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conversation;
+  }
+
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const [created] = await db.insert(conversations).values({
+      ...conversation,
+      id: conversation.id ?? randomUUID(),
+      userId: conversation.userId ?? DEFAULT_USER_ID,
+    }).returning();
+    return created;
+  }
+
+  async updateConversation(id: string, conversation: UpdateConversationRequest): Promise<Conversation> {
+    const [updated] = await db.update(conversations).set({
+      ...conversation,
+      // Always stamped server-side, so the history list can't be reordered by a
+      // client that forgot to send it.
+      updatedAt: new Date(),
+    }).where(eq(conversations.id, id)).returning();
+    return updated;
+  }
+
+  async deleteConversation(id: string): Promise<void> {
+    await db.delete(conversations).where(eq(conversations.id, id));
   }
 }
  

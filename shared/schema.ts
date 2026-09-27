@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -56,6 +56,30 @@ export const calendarEvents = pgTable("calendar_events", {
   isCompleted: boolean("is_completed").default(false),
 });
 
+export type StoredChatMessage = {
+  id: string;
+  role: "user" | "ai";
+  text: string;
+  timestamp: string; // ISO - JSON has no Date type
+};
+
+/**
+ * One AI conversation, messages included as jsonb.
+ *
+ * Deliberately NOT a separate chat_messages table. A message has no independent
+ * identity or query pattern here - you never fetch, update or sort one on its
+ * own, you always read or replace the whole thread. A child table would buy an
+ * extra join, extra endpoints and cascade rules for nothing.
+ */
+export const conversations = pgTable("conversations", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  messages: jsonb("messages").$type<StoredChatMessage[]>().notNull().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // === RELATIONS ===
 
 export const tasksRelations = relations(tasks, ({ many }) => ({
@@ -93,6 +117,11 @@ export const insertTaskSchema = createInsertSchema(tasks).extend({ id: z.string(
 export const insertWorkflowSchema = createInsertSchema(workflows).extend({ id: z.string().optional() });
 export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).extend({ id: z.string().optional() });
 export const insertCalendarEventSchema = createInsertSchema(calendarEvents).extend({ id: z.string().optional() });
+export const insertConversationSchema = createInsertSchema(conversations).extend({
+  id: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+});
 
 // === INFERRED TYPES ===
 
@@ -107,6 +136,10 @@ export type InsertWorkflowStep = z.infer<typeof insertWorkflowStepSchema>;
 
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type UpdateConversationRequest = Partial<Pick<InsertConversation, "title" | "messages">>;
 
 // === COMPOSITE TYPES ===
 

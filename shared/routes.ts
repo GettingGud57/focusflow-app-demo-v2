@@ -3,9 +3,11 @@ import {
   insertTaskSchema, 
   insertWorkflowSchema, 
   insertCalendarEventSchema,
+  insertConversationSchema,
   tasks,
   workflows,
-  calendarEvents
+  calendarEvents,
+  conversations
 } from './schema';
 
 export const errorSchemas = {
@@ -159,7 +161,51 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
-  }
+  },
+
+  conversations: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/conversations',
+      responses: {
+        200: z.array(z.custom<typeof conversations.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/conversations/:id',
+      responses: {
+        200: z.custom<typeof conversations.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/conversations',
+      input: insertConversationSchema,
+      responses: {
+        201: z.custom<typeof conversations.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/conversations/:id',
+      input: insertConversationSchema.partial(),
+      responses: {
+        200: z.custom<typeof conversations.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/conversations/:id',
+      responses: {
+        204: z.void(),
+      },
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

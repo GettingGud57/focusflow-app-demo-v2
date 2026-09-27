@@ -137,6 +137,50 @@ export async function registerRoutes(
   });
 
  
+  // Conversations (AI chat history)
+  app.get(api.conversations.list.path, async (req, res) => {
+    const list = await storage.getConversations();
+    res.json(list);
+  });
+
+  app.get(api.conversations.get.path, async (req, res) => {
+    const conversation = await storage.getConversation(req.params.id);
+    if (!conversation) return res.status(404).json({ message: "Conversation not found" });
+    res.json(conversation);
+  });
+
+  app.post(api.conversations.create.path, async (req, res) => {
+    try {
+      const input = api.conversations.create.input.parse(req.body);
+      const conversation = await storage.createConversation(input);
+      res.status(201).json(conversation);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.conversations.update.path, async (req, res) => {
+    try {
+      const input = api.conversations.update.input.parse(req.body);
+      const conversation = await storage.updateConversation(req.params.id, input);
+      if (!conversation) return res.status(404).json({ message: "Conversation not found" });
+      res.json(conversation);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.conversations.delete.path, async (req, res) => {
+    await storage.deleteConversation(req.params.id);
+    res.status(204).send();
+  });
+
   // --- AI Proxy Route ---
   app.post("/api/ai/generate", async (req, res) => {
     try {

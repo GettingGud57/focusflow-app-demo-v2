@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, ReactNode, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks';
 import { useWorkflows, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow } from '@/hooks/use-workflows';
 import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent } from '@/hooks/use-calendar';
 import { api } from '@shared/routes';
 import { unlockAudio } from '@/lib/alarm';
+import { useConversations, useCreateConversation, useUpdateConversation, useDeleteConversation } from '@/hooks/use-conversations';
+import type { Conversation } from '@shared/schema';
 
 export type Task = {
   id: string;
@@ -110,6 +112,12 @@ interface DataContextType {
   toggleEventCompletion: (id: string) => void;
   addMessage: (role: 'user' | 'ai', text: string) => void;
   clearMessages: () => void;
+  // AI chat history. `messages` stays the live working copy so the chat UI is
+  // unchanged; these persist it and let you switch threads.
+  conversations: Conversation[];
+  conversationId: string | null;
+  loadConversation: (id: string) => Promise<void>;
+  deleteConversation: (id: string) => Promise<void>;
   startTimer: (taskId: string, duration: number) => void;
   stopTimer: () => void;
   // [CLEANER] And here
@@ -425,14 +433,97 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const discardChanges = () => setPendingData(null);
 
    // ============================================================
-  // MESSAGES
+  // MESSAGES + CHAT HISTORY
   // ============================================================
-  const addMessage = (role: 'user' | 'ai', text: string) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setMessages(prev => [...prev, { id, role, text, timestamp: new Date() }]);
+  const { data: conversationsData = [] } = useConversations();
+  const createConversationMutation = useCreateConversation();
+  const updateConversationMutation = useUpdateConversation();
+  const deleteConversationMutation = useDeleteConversation();
+
+  // null means "not saved yet" - a brand new thread only gets a row once there's
+  // something in it worth keeping.
+  const [conversationId, setConversationId] = useState<string | null>(() =>
+    loadFromStorage("myApp_conversationId", null)
+  );
+
+  useEffect(() => {
+    localStorage.setItem("myApp_conversationId", JSON.stringify(conversationId));
+  }, [conversationId]);
+
+  // Kept in a ref as well as state: addMessage's updater runs before the next
+  // render, so reading state there would use a stale id on the second message of
+  // a brand new thread and create a duplicate row.
+  const conversationIdRef = useRef<string | null>(conversationId);
+  useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
+
+  const persistMessages = async (next: ChatMessage[]) => {
+    // Don't create a row for the greeting alone - only once the user has said
+    // something.
+    const hasUserContent = next.some(m => m.role === "user");
+    if (!hasUserContent) return;
+
+    const payload = next.map(m => ({
+      id: m.id,
+      role: m.role,
+      text: m.text,
+      timestamp: (m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp)).toISOString(),
+    }));
+
+    try {
+      const existingId = conversationIdRef.current;
+      if (existingId) {
+        await updateConversationMutation.mutateAsync({ id: existingId, messages: payload });
+        return;
+      }
+      // Title from the first thing the user actually said - the only text
+      // available that describes the thread.
+      const firstUserText = next.find(m => m.role === "user")?.text ?? "New chat";
+      const title = firstUserText.trim().slice(0, 60) || "New chat";
+      const created = await createConversationMutation.mutateAsync({ title, messages: payload } as any);
+      conversationIdRef.current = created.id;
+      setConversationId(created.id);
+    } catch (err) {
+      // Chat history is a convenience. Losing a save must never break the chat.
+      console.warn("[chat] failed to persist conversation", err);
+    }
   };
 
-  const clearMessages = () => setMessages(INITIAL_MESSAGES);
+  const addMessage = (role: 'user' | 'ai', text: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setMessages(prev => {
+      const next = [...prev, { id, role, text, timestamp: new Date() }];
+      // Persist after every message rather than buffering and flushing on close.
+      // A thread you abandon mid-answer is still worth keeping, and there's no
+      // "conversation ended" event to hang a flush on.
+      void persistMessages(next);
+      return next;
+    });
+  };
+
+  // Starting a NEW thread just detaches from the current row. The old
+  // conversation is already saved, so there is nothing to write here.
+  const clearMessages = () => {
+    setConversationId(null);
+    setMessages(INITIAL_MESSAGES);
+  };
+
+  const loadConversation = async (id: string) => {
+    const res = await fetch(`/api/conversations/${id}`, { credentials: "include" });
+    if (!res.ok) return;
+    const conversation = await res.json();
+    setConversationId(conversation.id);
+    // JSON has no Date type, so timestamps come back as strings.
+    setMessages((conversation.messages ?? []).map((m: any) => ({
+      ...m,
+      timestamp: new Date(m.timestamp),
+    })));
+  };
+
+  const removeConversation = async (id: string) => {
+    await deleteConversationMutation.mutateAsync(id);
+    // Deleting the thread you're reading leaves you on a fresh one.
+    if (id === conversationId) clearMessages();
+  };
 
   // ============================================================
   // TIMER
@@ -505,6 +596,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toggleEventCompletion,
       addMessage,
       clearMessages,
+      conversations: conversationsData,
+      conversationId,
+      loadConversation,
+      deleteConversation: removeConversation,
       proposeChanges,
       confirmChanges,
       discardChanges,

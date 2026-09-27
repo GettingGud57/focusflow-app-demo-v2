@@ -1,4 +1,4 @@
-import { Send, X,Check,Plus, Paperclip} from "lucide-react";
+import { Send, X, Check, Plus, Paperclip, Clock, Trash2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
@@ -29,12 +29,14 @@ const [input, setInput] = useState("");
 const [isTyping, setIsTyping] = useState(false);
 
 const [selectedFile, setSelectedFile] = useState<File | null>(null); // New state for file
+const [showHistory, setShowHistory] = useState(false);
 const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden input
 
 
 const scrollRef = useRef<HTMLDivElement>(null);
 const textareaRef = useRef<HTMLTextAreaElement>(null);
-const {tasks, workflows, messages, addMessage,clearMessages,pendingData, proposeChanges, confirmChanges, discardChanges } = useData();
+const {tasks, workflows, messages, addMessage,clearMessages,pendingData, proposeChanges, confirmChanges, discardChanges,
+       conversations, conversationId, loadConversation, deleteConversation } = useData();
 const { apiKey } = useApiKey();
 
 
@@ -260,19 +262,47 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
   return (
     <div 
       className={cn(
-        "border-l bg-background flex flex-col transition-all duration-300 ease-in-out h-dvh fixed md:sticky right-0 top-0 z-40",
+        // z-[60] beats the bottom nav's z-50. At z-40 the nav's blurred background
+        // covered the input row and paperclip on mobile, which is why they were
+        // invisible. On mobile this panel is full-screen, so covering the nav is
+        // correct anyway - the X closes it.
+        "border-l bg-background flex flex-col transition-all duration-300 ease-in-out h-dvh fixed md:sticky right-0 top-0 z-[60] md:z-40",
         shouldShow ? "w-full md:w-[400px] opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none"
       )}
     >
-      {/* HEADER */}
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-semibold text-sm">AI Assistant</h2>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => clearMessages()}>
-          <Plus className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
+      {/* HEADER
+          justify-between with three loose children spread the Plus into the
+          middle. Grouping the actions in one flex box keeps them together on the
+          right, and h-8 w-8 is a usable touch target where h-6 was 24px. */}
+      <div className="p-4 border-b flex items-center justify-between gap-2">
+        <h2 className="font-semibold text-sm truncate">
+          {showHistory ? "Chat history" : "AI Assistant"}
+        </h2>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            variant={showHistory ? "secondary" : "ghost"}
+            size="icon"
+            className="h-8 w-8"
+            title="Chat history"
+            aria-label="Chat history"
+            onClick={() => setShowHistory((prev) => !prev)}
+          >
+            <Clock className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="New chat"
+            aria-label="New chat"
+            onClick={() => { clearMessages(); setShowHistory(false); }}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Close" aria-label="Close" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
       <div className="px-4 py-2 text-xs text-muted-foreground border-b">
         {apiKey ? "Using your saved API key." : "Using project key; add yours in Settings."}
@@ -315,6 +345,62 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
         </div>
       )}
 
+      {/* HISTORY PANEL - replaces the chat area instead of floating above it. A
+          popover would need positioning work and be cramped on a phone; this is
+          full-height and scrolls naturally. */}
+      {showHistory ? (
+        <div className="flex-1 bg-muted/10 overflow-y-auto p-3 space-y-2">
+          {conversations.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-8">
+              No saved chats yet. A thread is saved as soon as you send a message.
+            </p>
+          ) : (
+            conversations.map((conv) => {
+              const isCurrent = conv.id === conversationId;
+              const count = Array.isArray(conv.messages) ? conv.messages.length : 0;
+              return (
+                <div
+                  key={conv.id}
+                  className={cn(
+                    "group flex items-start gap-2 rounded-lg border p-2 transition-colors",
+                    isCurrent ? "border-primary/40 bg-primary/5" : "border-transparent bg-card hover:bg-muted/60"
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="flex-1 min-w-0 text-left"
+                    onClick={async () => {
+                      await loadConversation(conv.id);
+                      setShowHistory(false);
+                    }}
+                  >
+                    <span className="flex items-center gap-1.5 text-sm font-medium line-clamp-2">
+                      <MessageSquare className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                      {conv.title}
+                    </span>
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">
+                      {count} message{count === 1 ? "" : "s"}
+                      {conv.updatedAt ? ` · ${new Date(conv.updatedAt).toLocaleDateString()}` : ""}
+                      {isCurrent ? " · current" : ""}
+                    </span>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    title="Delete chat"
+                    aria-label={`Delete ${conv.title}`}
+                    onClick={() => void deleteConversation(conv.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : (
+      <>
       {/* CHAT AREA */}
       <div className="flex-1 bg-muted/10 overflow-y-auto p-4 space-y-3">
         {messages.map((msg) => (
@@ -350,7 +436,9 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
 
 
       {/* INPUT AREA */}
-      <div className="p-4 border-t bg-background">
+      {/* pb accounts for the home indicator, since this panel now sits above the
+          bottom nav that used to provide that clearance. */}
+      <div className="p-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] md:pb-4 border-t bg-background">
         {selectedFile && (
           <div className="text-xs text-muted-foreground mb-2 flex items-center justify-between">
             <span 
@@ -436,6 +524,8 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
           </Button>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
