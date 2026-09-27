@@ -23,18 +23,18 @@ export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
   return (
     // no need  'key={wf.id}' (it belongs in workflowpage)
     <Card className={cn(
-      "group p-6 rounded-2xl border transition-all hover:shadow-lg bg-card",
+      "group p-3 sm:p-6 rounded-2xl border transition-all hover:shadow-lg bg-card",
       isPending && "bg-red-50 border-red-300 ring-2 ring-red-200"
     )}>
       <div className="flex justify-between items-start mb-4">
         {/* Left Side: Icon & Title */}
 
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 rounded-lg text-primary">
-            <Layers className="w-5 h-5" />
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg text-primary shrink-0">
+            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <h3 className="font-bold text-lg">{wf.title}</h3>
+          <div className="min-w-0">
+            <h3 className="font-bold text-base sm:text-lg line-clamp-2 sm:line-clamp-1" title={wf.title}>{wf.title}</h3>
             <p className="text-xs text-muted-foreground">
               {wf.steps.length} steps
               {wf.loop && wf.loop > 1 ? ` · ${wf.loop} cycles` : ''}
@@ -47,7 +47,7 @@ export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
 
         {/* Right Side: Actions */}
         {!isPending && (
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           {/* Edit Button */}
           <Button 
             variant="ghost" 
@@ -76,12 +76,12 @@ export function WorkflowCard({ wf, onEdit, isPending }: WorkflowCardProps) {
       </div>
 
 
-      <p className="text-sm text-muted-foreground mb-6 line-clamp-2 min-h-[2.5em]">
+      <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-6 line-clamp-2 min-h-[2.5em]">
         {wf.description || "No description provided."}
       </p>
 
       {/* The Preview Sequence Logic */}
-      <div className="space-y-3">
+      <div className="hidden sm:block space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview Sequence</div>
         <div className="flex items-center gap-2 overflow-hidden">
           {wf.steps.slice(0, 3).map((step: any, i: number) => {

@@ -24,7 +24,7 @@ export function Navigation({ onOpenSettings }: NavigationProps) {
           <img src="/fffavicon.png" alt="FocusFlow" className="w-8 h-8 rounded-lg object-cover" />
           <span className="font-display font-bold text-xl tracking-tight">FocusFlow</span>
         </div>
-        <div className="flex md:flex-col gap-2 md:gap-3 w-full">
+        <div className="flex md:flex-col gap-2 md:gap-3 flex-1 md:w-full">
           {links.map((link) => {
             const isActive = location === link.href;
             const Icon = link.icon;
@@ -46,7 +46,7 @@ export function Navigation({ onOpenSettings }: NavigationProps) {
             );
           })}
         </div>
-        <div className="w-full pt-2 md:pt-4 md:mt-auto border-t md:border-t-0 border-border/50">
+        <div className="w-auto shrink-0 ml-auto md:ml-0 md:w-full pt-0 md:pt-4 md:mt-auto border-t-0 md:border-t-0 border-border/50">
           <Button 
             variant="ghost" 
             className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 w-full justify-center md:justify-start text-muted-foreground hover:bg-muted/50 hover:text-foreground h-auto font-normal"

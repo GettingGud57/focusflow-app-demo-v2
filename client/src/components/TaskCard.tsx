@@ -29,7 +29,7 @@ export default function TasksCards({ task, isPending, onEdit, onDelete }: TaskCa
         <Card 
               key={task.id} 
               className={cn(
-                "group relative p-6 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 bg-card overflow-hidden",
+                "group relative p-3 sm:p-6 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 bg-card overflow-hidden",
                 isPending && "bg-red-50 border-red-300 ring-2 ring-red-200"
               )}
             >
@@ -41,7 +41,8 @@ export default function TasksCards({ task, isPending, onEdit, onDelete }: TaskCa
               <div className="flex justify-between items-start mb-4 pl-2">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 text-xs font-medium text-foreground">
                   <Clock className="w-3 h-3" />
-                  {task.duration} mins
+                  {/* "mins" doesn't fit beside the menu button at 2-col width */}
+                  {task.duration}<span className="hidden sm:inline">&nbsp;mins</span><span className="sm:hidden">m</span>
                 </div>
                 {!isPending && (
                 <DropdownMenu>
@@ -63,10 +64,10 @@ export default function TasksCards({ task, isPending, onEdit, onDelete }: TaskCa
               </div>
 
               <div className="pl-2">
-                <h3 className="font-display font-bold text-lg mb-2 line-clamp-1" title={task.title}>
+                <h3 className="font-display font-bold text-base sm:text-lg mb-1 sm:mb-2 line-clamp-2 sm:line-clamp-1" title={task.title}>
                   {task.title}
                 </h3>
-                <p className="text-sm text-muted-foreground line-clamp-3 min-h-[3rem]">
+                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-3 min-h-[2rem] sm:min-h-[3rem]">
                   {task.description || "No description provided."}
                 </p>
               </div>
