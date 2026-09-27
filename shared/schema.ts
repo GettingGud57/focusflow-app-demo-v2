@@ -119,6 +119,13 @@ export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).extend
 export const insertCalendarEventSchema = createInsertSchema(calendarEvents).extend({ id: z.string().optional() });
 export const insertConversationSchema = createInsertSchema(conversations).extend({
   id: z.string().optional(),
+  // userId is notNull() with no column default, so drizzle-zod makes it
+  // REQUIRED - and a missing one is a 400 before the request reaches storage.
+  // But storage.createConversation already falls back to DEFAULT_USER_ID, and
+  // ownership is the server's business (auth's, later) - the client has no
+  // reason to know a userId, let alone post a hardcoded placeholder the way
+  // addTask does.
+  userId: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 });

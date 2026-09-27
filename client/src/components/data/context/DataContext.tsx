@@ -456,6 +456,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const conversationIdRef = useRef<string | null>(conversationId);
   useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
 
+  // Mirror of `messages` so addMessage can build the next array without reading
+  // state inside an updater. Kept in step by every writer below, with this effect
+  // as a backstop.
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   const persistMessages = async (next: ChatMessage[]) => {
     // Don't create a row for the greeting alone - only once the user has said
     // something.
@@ -483,27 +489,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
       conversationIdRef.current = created.id;
       setConversationId(created.id);
     } catch (err) {
-      // Chat history is a convenience. Losing a save must never break the chat.
-      console.warn("[chat] failed to persist conversation", err);
+      // Chat history is a convenience, so a failed save must never break the
+      // chat - but it must not be invisible either. Swallowing this is how a 400
+      // from a missing userId looked exactly like "saving isn't implemented".
+      console.error("[chat] conversation NOT saved:", err);
     }
   };
 
   const addMessage = (role: 'user' | 'ai', text: string) => {
     const id = Math.random().toString(36).substr(2, 9);
-    setMessages(prev => {
-      const next = [...prev, { id, role, text, timestamp: new Date() }];
-      // Persist after every message rather than buffering and flushing on close.
-      // A thread you abandon mid-answer is still worth keeping, and there's no
-      // "conversation ended" event to hang a flush on.
-      void persistMessages(next);
-      return next;
-    });
+    // Computed from a ref rather than inside a setMessages updater. StrictMode
+    // (see App.tsx) invokes updaters TWICE in development to surface impurity -
+    // so a save fired from inside one ran twice, and both runs saw a null
+    // conversationId and created their own row. Side effects belong outside.
+    const next = [...messagesRef.current, { id, role, text, timestamp: new Date() }];
+    messagesRef.current = next;
+    setMessages(next);
+    // Persisted after every message rather than flushed when the chat closes.
+    // A thread abandoned mid-answer is still worth keeping, and there is no
+    // "conversation ended" event to hang a flush on.
+    void persistMessages(next);
   };
 
   // Starting a NEW thread just detaches from the current row. The old
   // conversation is already saved, so there is nothing to write here.
   const clearMessages = () => {
     setConversationId(null);
+    conversationIdRef.current = null;
+    messagesRef.current = INITIAL_MESSAGES;
     setMessages(INITIAL_MESSAGES);
   };
 
@@ -512,11 +525,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!res.ok) return;
     const conversation = await res.json();
     setConversationId(conversation.id);
+    conversationIdRef.current = conversation.id;
     // JSON has no Date type, so timestamps come back as strings.
-    setMessages((conversation.messages ?? []).map((m: any) => ({
+    const loaded = (conversation.messages ?? []).map((m: any) => ({
       ...m,
       timestamp: new Date(m.timestamp),
-    })));
+    }));
+    messagesRef.current = loaded;
+    setMessages(loaded);
   };
 
   const removeConversation = async (id: string) => {
