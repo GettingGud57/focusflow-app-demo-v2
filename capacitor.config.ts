@@ -5,24 +5,18 @@ const config: CapacitorConfig = {
   appName: 'FocusFlow',
 
   // Vite writes the client here (see vite.config.ts build.outDir). Capacitor
-  // copies this folder into the Android project on `cap sync`.
+  // copies this folder into the Android project on `cap sync`. Unused while
+  // `server.url` is set, but `cap sync` still requires it to exist.
   webDir: 'dist/public',
 
   server: {
-    // STAGE 1 ONLY.
+    // The WebView loads the deployed app instead of bundled assets, so it stays
+    // same-origin with the API: no CORS, no absolute API base URL, no apiUrl()
+    // helper. Native plugins (local notifications) still work on a remote URL.
     //
-    // Pointing the WebView at the LAN dev server proves the native shell works
-    // with zero changes to client/ or server/ - the app stays same-origin with
-    // the API, so no CORS and no absolute API base URL needed yet.
-    //
-    // To ship bundled assets instead, delete this whole `server` block. That is
-    // when you need the apiUrl() helper and cors() on Express, because the
-    // WebView's origin becomes http://localhost rather than your server.
-    url: 'http://192.168.0.19:3000',
-
-    // Android blocks plain http:// by default. Required while pointing at a LAN
-    // dev server; irrelevant once assets are bundled or the URL is https.
-    cleartext: true,
+    // Trade-off: the app needs a network connection to open. Bundling assets
+    // (delete this block) is only worth it if offline use ever matters.
+    url: 'https://focusflow-app-demo-v2-production.up.railway.app',
   },
 };
 

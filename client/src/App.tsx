@@ -21,6 +21,7 @@ import { AiSidebar } from "./components/AiSidebar";
 import { useTheme } from "@/hooks/use-theme";
 import { useAlarm } from "@/hooks/use-alarm";
 import { SettingsDialog } from "./components/SettingsDialog";
+import { AccessGate } from "./components/AccessGate";
 function Router() {
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -78,10 +79,12 @@ function App() {
     <StrictMode>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <AccessGate>
         <DataProvider>
         <Toaster />
         <Router />
         </DataProvider>
+        </AccessGate>
       </TooltipProvider>
     </QueryClientProvider>
     </StrictMode>

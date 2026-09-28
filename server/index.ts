@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { requireAccessToken } from "./auth";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
@@ -70,6 +71,12 @@ app.use((req, res, next) => {
 
   next();
 });
+
+app.use("/api", requireAccessToken);
+
+// Lets the client check a token before storing it. Reaching here means the
+// middleware above already accepted it.
+app.get("/api/auth/check", (_req, res) => res.status(204).send());
 
 (async () => {
   await registerRoutes(httpServer, app);

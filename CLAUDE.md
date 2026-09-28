@@ -145,12 +145,16 @@ Each of these cost real debugging time.
 
 ## Known gaps
 
-- **No auth.** Everything is `"default-user"` / `"system_seed"`. `passport`,
-  `express-session` and `connect-pg-simple` are installed and unused. If auth is
-  added, use a **bearer token, not a cookie** — the Capacitor WebView is
-  cross-origin to the API once assets are bundled.
-- **`/api/ai/generate` is unauthenticated and unthrottled**, and falls back to the
-  server's Groq key.
+- **Auth is one shared token, not accounts.** `server/auth.ts` requires
+  `Authorization: Bearer $ACCESS_TOKEN` on every `/api` route and fails closed
+  (503) if the env var is unset — set it on the host *before* deploying.
+  `lib/accessToken.ts` wraps `window.fetch` to attach it, and `AccessGate` asks
+  for it once per device; any 401 clears it. Data is still all `"default-user"` /
+  `"system_seed"`; `passport`, `express-session` and `connect-pg-simple` are
+  installed and unused. Keep it a **bearer token, not a cookie** — the Capacitor
+  WebView goes cross-origin if assets are ever bundled.
+- **`/api/ai/generate` is unthrottled** (only gated by the token), and falls back
+  to the server's Groq key.
 - **Nothing records completions.** `advance()` fires confetti and writes nothing,
   so "did this help me finish things" is unanswerable. A `sessions` table with
   one row per step is the planned fix.
