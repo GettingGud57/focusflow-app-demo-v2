@@ -23,6 +23,34 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 // Android requires a 32-bit int.
 const TIMER_DONE_ID = 1;
 
+// The plugin's built-in "default" channel is IMPORTANCE_DEFAULT with no sound
+// of ours: it shows up quietly in the shade, which is useless for an alarm.
+// This one is HIGH (heads-up + sound) and plays res/raw/timer_done.wav, a
+// render of the in-app "Beeps" cue.
+//
+// Android freezes a channel's sound and importance once it exists - later
+// createChannel calls can't change them. To change either, bump the id.
+const TIMER_CHANNEL_ID = "timer_done_v1";
+const IMPORTANCE_HIGH = 4;
+
+let channelReady: Promise<void> | null = null;
+
+function ensureTimerChannel(): Promise<void> {
+  channelReady ??= LocalNotifications.createChannel({
+    id: TIMER_CHANNEL_ID,
+    name: "Timer finished",
+    description: "Rings when a task's planned time runs out",
+    importance: IMPORTANCE_HIGH,
+    sound: "timer_done.wav",
+    vibration: true,
+    visibility: 1, // public: show on the lock screen
+  }).catch((err) => {
+    channelReady = null; // let the next schedule retry
+    console.warn("[nativeAlarm] createChannel failed", err);
+  });
+  return channelReady;
+}
+
 export function isNativeApp(): boolean {
   return Capacitor.isNativePlatform();
 }
@@ -89,11 +117,14 @@ export async function scheduleTimerDone(taskTitle: string, fireAt: Date): Promis
     return;
   }
 
+  await ensureTimerChannel();
+
   try {
     await LocalNotifications.schedule({
       notifications: [
         {
           id: TIMER_DONE_ID,
+          channelId: TIMER_CHANNEL_ID,
           title: "Time's up",
           body: taskTitle,
           schedule: {
