@@ -126,6 +126,15 @@ Each of these cost real debugging time.
   was added by hand.
 - **`allowWhileIdle` notifications fire at most once per 9 minutes per app.** This
   is why the flow-mode chain can't be fully pre-scheduled for short steps.
+- **Honor (MagicOS) freezes background apps** ("AppFastHibernation" in
+  logcat). AlarmManager still fires on time, but the broadcast to the frozen
+  process is held until the app is reopened, so the notification arrives late
+  in a pile with the in-app catch-up. Exempting the app from battery
+  optimisation fixed it on the dev phone. If it regresses, the real fix is a
+  foreground service during a run (what Forest does), not more alarm flags.
+- The plugin's `default` channel is IMPORTANCE_DEFAULT with no sound of ours —
+  silent in practice. The timer uses its own `timer_done_v1` channel; channel
+  sound/importance are frozen once created, so bump the id to change them.
 - Notification sounds must live in `android/app/src/main/res/raw/` (lowercase,
   `.wav` preferred) and need a notification channel on Android 8+. Web assets in
   `client/public/sounds/` are invisible to a notification.
