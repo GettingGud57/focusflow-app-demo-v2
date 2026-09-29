@@ -14,6 +14,17 @@ import remarkGfm from 'remark-gfm';
 // dependencies (like the OpenAI SDK) during HMR.
 import { useEffect, useRef, useState } from "react";
 import { newId } from "@/lib/newId";
+import { format, isToday, isThisYear } from "date-fns";
+
+// "14:05" today, "27 Sep 14:05" earlier, full date in another year. Messages
+// restored from localStorage can carry the timestamp as an ISO string.
+function formatMessageTime(timestamp: Date | string) {
+  const d = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return "";
+  if (isToday(d)) return format(d, "HH:mm");
+  if (isThisYear(d)) return format(d, "d MMM HH:mm");
+  return format(d, "d MMM yyyy HH:mm");
+}
 
 
 
@@ -405,18 +416,22 @@ const shouldShow = isOpen && !hiddenRoutes.includes(location);
       {/* CHAT AREA */}
       <div className="flex-1 bg-muted/10 overflow-y-auto p-4 space-y-3">
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={cn(
-              "rounded-lg p-3 max-w-[95%] text-sm overflow-x-auto",
-              msg.role === "user"
-                ? "bg-indigo-600 text-white ml-auto"
-                : "bg-muted text-foreground prose prose-sm dark:prose-invert max-w-none break-words"
-            )}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {msg.text}
-            </ReactMarkdown>
+          <div key={msg.id} className={cn("flex flex-col", msg.role === "user" ? "items-end" : "items-start")}>
+            <div
+              className={cn(
+                "rounded-lg p-3 max-w-[95%] text-sm overflow-x-auto",
+                msg.role === "user"
+                  ? "bg-indigo-600 text-white"
+                  : "self-stretch bg-muted text-foreground prose prose-sm dark:prose-invert max-w-none break-words"
+              )}
+            >
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {msg.text}
+              </ReactMarkdown>
+            </div>
+            <time className="mt-1 px-1 text-[11px] text-muted-foreground">
+              {formatMessageTime(msg.timestamp)}
+            </time>
           </div>
         ))}
         {isTyping && (
